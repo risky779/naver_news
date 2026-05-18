@@ -532,9 +532,14 @@ def analyze_rules(article: dict) -> dict:
     is_robonews  = bool(ROBONEWS_PATTERN.search(body)) or bool(_BOTBYLINE_RE.search(byline or ""))
     c_absent     = not byline or len(byline) < 2
     c_exempt     = bool(byline) and bool(C_EXEMPT_PATTERN.search(byline))
-    # DEPT_PATTERN을 먼저 평가: 부서명/방송사명이 개인명 패턴보다 우선
-    c_dept       = bool(byline) and not c_exempt and bool(DEPT_PATTERN.search(byline))
-    has_personal = bool(byline) and not c_dept and bool(_BYLINE_PERSONAL_RE.search(byline))
+    # 바이라인 첫 단어(공백 이전)가 부서명이면 → 개인명 패턴보다 우선해 부서명 처리
+    # ex) "박예은 디지털뉴스부 인턴" → 첫 단어 "박예은"은 부서명 아님 → 개인명 인정
+    # ex) "온라인팀" → 첫 단어 자체가 부서명 → 개인명 불인정
+    _bl_first    = byline.split()[0] if byline else ""
+    _first_dept  = bool(_bl_first) and bool(DEPT_PATTERN.search(_bl_first))
+    has_personal = (bool(byline) and not _first_dept
+                    and bool(_BYLINE_PERSONAL_RE.search(byline)))
+    c_dept       = bool(byline) and not c_exempt and not has_personal and bool(DEPT_PATTERN.search(byline))
     c_bad        = (c_absent or c_dept) and not is_breaking and not is_robonews
     results["C_byline_missing"] = {
         "violated": c_bad,
