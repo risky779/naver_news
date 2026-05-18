@@ -460,35 +460,47 @@ async def get_article_content(page, url: str) -> dict:
     byline = re.sub(r"\s*(기자|특파원|기자\s*=).*|@\S+|\s+", " ", byline_r).strip()
 
     # 바이라인 태그 없을 때 본문 앞/뒤에서 폴백 추출
-    if not byline and body:
+    _byline_is_dept = bool(byline) and not _BYLINE_PERSONAL_RE.search(byline) and bool(DEPT_PATTERN.search(byline))
+    if (not byline or _byline_is_dept) and body:
         all_lines = [l.strip() for l in body.strip().splitlines() if l.strip()]
+        _personal = ""
+        # 크레딧 블록: "기자 | 유투권" (YTN 등 방송사 형식)
+        if not _personal:
+            for line in all_lines:
+                m = re.search(r"기자\s*[\|｜]\s*([가-힣]{2,5})", line)
+                if m:
+                    _personal = m.group(1)
+                    break
         # 마지막 5줄: "홍길동 기자", "MBN 문화부 이상주기자"
-        for line in reversed(all_lines[-5:]):
-            m = re.search(r"([가-힣]{2,6})\s*(기자|특파원)$", line)
-            if m:
-                byline = m.group(1)
-                break
+        if not _personal:
+            for line in reversed(all_lines[-5:]):
+                m = re.search(r"([가-힣]{2,6})\s*(기자|특파원)$", line)
+                if m:
+                    _personal = m.group(1)
+                    break
         # 마지막 5줄: "김동기 청담 총괄셰프 paychey@naver.com" (이름+직책+이메일)
-        if not byline:
+        if not _personal:
             for line in reversed(all_lines[-5:]):
                 m = re.match(r"^([가-힣]{2,4}[\s가-힣A-Za-z·]+?)\s+\S+@\S+$", line)
                 if m:
-                    byline = m.group(1).strip()
+                    _personal = m.group(1).strip()
                     break
         # 마지막 3줄 + 첫 3줄: 외부 기고 서명 "김만기 KAIST 교수", "[신율 명지대 교수]"
-        if not byline:
+        if not _personal:
             for line in list(reversed(all_lines[-3:])) + all_lines[:3]:
                 if EXPERT_TITLE_RE.search(line) and _EXPERT_LINE_RE.match(line):
-                    byline = re.sub(r"[\[\]]", "", line).strip()
+                    _personal = re.sub(r"[\[\]]", "", line).strip()
                     break
         # 첫 3줄: 영문 기고자명 ("Lee Hyun-sang") + 다음 줄에 "author" 언급
-        if not byline and len(all_lines) >= 2:
+        if not _personal and len(all_lines) >= 2:
             for i, line in enumerate(all_lines[:3]):
                 next_line = all_lines[i + 1] if i + 1 < len(all_lines) else ""
                 if re.match(r"^[A-Z][a-z]+ [A-Z][a-z\-]+$", line) and \
                    re.search(r"author|columnist|writer|reporter|correspondent", next_line, re.I):
-                    byline = line
+                    _personal = line
                     break
+        if _personal:
+            byline = _personal
 
     return {"title": title, "body": body, "byline": byline,
             "category": category, "date": date_str}
