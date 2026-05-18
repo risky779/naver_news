@@ -261,9 +261,12 @@ DEPT_PATTERN = re.compile(
 # - BY NAME 형식: 코리아헤럴드 스타일 (BY CHO MUN-GYU [...])
 _BYLINE_PERSONAL_RE = re.compile(
     r"^[가-힣]{2,5}([\s(·\[]|$)|"
-    r"^[A-Z][a-z]+\s+[A-Z][a-z]+-[a-z]+|"
+    r"^[A-Z][a-z]+\s+[A-Z][a-z]+-[a-z]+|"   # Firstname Hye-jin 스타일 (코리아헤럴드)
+    r"^[A-Z][a-z]+-[A-Z][a-z]+\s+[A-Z][a-z]+|"  # Man-Ki Kim 스타일 (하이픈 첫 단어)
     r"^BY\s+[A-Z]"
 )
+# 제목 앞 대괄호 저자명 패턴: "[Man-Ki Kim]Article title" (코리아헤럴드 칼럼)
+_TITLE_AUTHOR_RE = re.compile(r'^\[([A-Z][A-Za-z\-]+ [A-Za-z][A-Za-z\-]*)\]')
 
 AI_GENERATION_WORDS   = ["ai가 작성", "ai가 생성", "인공지능이 작성"]
 # AI 도구명은 단독 언급(인터뷰·기사 소재)과 구별하기 위해 생성 문맥 필요
@@ -471,13 +474,8 @@ async def get_article_content(page, url: str) -> dict:
                     break
         # 마지막 3줄 + 첫 3줄: 외부 기고 서명 "김만기 KAIST 교수", "[신율 명지대 교수]"
         if not byline:
-            EXPERT_TITLE = re.compile(
-                r"교수|원장|소장|대표|위원장|이사장|이사|연구원|연구위원|센터장|회장|처장|박사|전문위원|논설위원|칼럼니스트|장관|차관|청장|국장|부장|팀장|위원"
-            )
-            # 대괄호 허용: "[신율 명지대 교수]" → ^[\[]?[가-힣]
-            _expert_re = re.compile(r"^\[?[가-힣]{2,4}[\s·]")
             for line in list(reversed(all_lines[-3:])) + all_lines[:3]:
-                if EXPERT_TITLE.search(line) and _expert_re.match(line):
+                if EXPERT_TITLE_RE.search(line) and _EXPERT_LINE_RE.match(line):
                     byline = re.sub(r"[\[\]]", "", line).strip()
                     break
         # 첫 3줄: 영문 기고자명 ("Lee Hyun-sang") + 다음 줄에 "author" 언급
@@ -539,6 +537,12 @@ def analyze_rules(article: dict) -> dict:
     _first_dept  = bool(_bl_first) and bool(DEPT_PATTERN.search(_bl_first))
     has_personal = (bool(byline) and not _first_dept
                     and bool(_BYLINE_PERSONAL_RE.search(byline)))
+    # 바이라인에 개인명이 없으면 제목 앞 [저자명] 패턴으로 보완
+    # ex) "[Man-Ki Kim]Korea should..." → Man-Ki Kim을 저자로 인정
+    if not has_personal and title:
+        _tm = _TITLE_AUTHOR_RE.match(title)
+        if _tm and bool(_BYLINE_PERSONAL_RE.search(_tm.group(1))):
+            has_personal = True
     c_dept       = bool(byline) and not c_exempt and not has_personal and bool(DEPT_PATTERN.search(byline))
     c_bad        = (c_absent or c_dept) and not is_breaking and not is_robonews
     results["C_byline_missing"] = {
@@ -672,6 +676,14 @@ def get_recent_db_titles(conn: sqlite3.Connection, press_code: str, days: int = 
     ).fetchall()
     return [row[0] for row in rows if row[0]]
 
+
+# 외부 기고·칼럼 서명에 사용되는 직함 (본문 앞/뒤에서 바이라인 폴백 추출 시 사용)
+EXPERT_TITLE_RE = re.compile(
+    r"교수|원장|소장|대표|위원장|이사장|이사|연구원|연구위원|센터장|회장|처장|박사|"
+    r"전문위원|논설위원|칼럼니스트|장관|차관|청장|국장|부장|팀장|위원|"
+    r"파트장|간호사|수간호사|약사|의사|변호사|검사|판사|세무사|회계사|건축사|감정평가사"
+)
+_EXPERT_LINE_RE = re.compile(r"^\[?[가-힣]{2,4}[\s·]")  # 이름 시작 패턴
 
 BREAKING_PATTERN = re.compile(r"^\[?속보\]?", re.IGNORECASE)
 

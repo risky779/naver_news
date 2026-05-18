@@ -21,7 +21,8 @@ DB_FILE  = "C:/Users/admin/naver_monitor.db"
 # naver_monitor의 분석 함수·상수 임포트
 from naver_monitor import (
     analyze_rules, ITEM_LABELS, ITEM_WEIGHTS,
-    init_db, get_article_content
+    init_db, get_article_content,
+    EXPERT_TITLE_RE, _EXPERT_LINE_RE,
 )
 
 
@@ -30,10 +31,6 @@ def reanalyze_from_body(conn: sqlite3.Connection) -> tuple[int, int]:
     rows = conn.execute(
         "SELECT url, title, byline, body FROM articles WHERE body IS NOT NULL AND body != ''"
     ).fetchall()
-
-    EXPERT_TITLE = re.compile(
-        r"교수|원장|소장|대표|위원장|이사장|이사|연구원|연구위원|센터장|회장|처장|박사|전문위원|논설위원|칼럼니스트|장관|차관|청장|국장|부장|팀장|위원"
-    )
 
     updated = skipped = 0
     for url, title, byline, body in rows:
@@ -55,9 +52,8 @@ def reanalyze_from_body(conn: sqlite3.Connection) -> tuple[int, int]:
                         break
             # 마지막 3줄 + 첫 3줄: 외부 기고 서명 "김만기 KAIST 교수", "[신율 명지대 교수]"
             if not byline:
-                _expert_re = re.compile(r"^\[?[가-힣]{2,4}[\s·]")
                 for line in list(reversed(all_lines[-3:])) + all_lines[:3]:
-                    if EXPERT_TITLE.search(line) and _expert_re.match(line):
+                    if EXPERT_TITLE_RE.search(line) and _EXPERT_LINE_RE.match(line):
                         byline = re.sub(r"[\[\]]", "", line).strip()
                         break
             # 첫 3줄: 영문 기고자명 + 다음 줄 "author/writer" 언급
