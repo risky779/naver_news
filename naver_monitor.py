@@ -243,6 +243,9 @@ C_EXEMPT_PATTERN = re.compile(
     r"공동\s*취재팀?|특별\s*취재팀?|풀단|Pool\s*Group",
     re.IGNORECASE
 )
+# 방송사 영상 클립 기사 — 재생 버튼 + 타임코드(00:24 등) 패턴
+# 영상 내에 기자명이 노출되므로 텍스트 바이라인 없어도 C항 예외
+_BROADCAST_CLIP_RE = re.compile(r"재생[\s\S]{0,60}\d{1,2}:\d{2}")
 # AI 자동생성 기사 공시 문구 — 작성자=알고리즘임을 명시한 경우 C항 예외
 ROBONEWS_PATTERN = re.compile(
     r"자동\s*생성\s*알고리즘|로봇\s*(기자|뉴스|저널리즘|기사)|AI\s*(기자|뉴스)|알고리즘에\s*의해\s*(실시간으로\s*)?작성",
@@ -540,9 +543,11 @@ def analyze_rules(article: dict) -> dict:
 
     # C. 바이라인 (1점) — 작성자 식별 정보 부재 (규정 제11조 C항)
     # 예외: 속보 기사, 공동취재팀·특별취재팀·풀단, AI 자동생성 공시 기사
-    is_breaking  = bool(BREAKING_PATTERN.search(title))
+    is_breaking   = bool(BREAKING_PATTERN.search(title))
     # 본문의 로봇기사 공시 OR 바이라인 자체가 봇으로 끝나는 경우 (C-APT봇, 웨더봇 등)
-    is_robonews  = bool(ROBONEWS_PATTERN.search(body)) or bool(_BOTBYLINE_RE.search(byline or ""))
+    is_robonews   = bool(ROBONEWS_PATTERN.search(body)) or bool(_BOTBYLINE_RE.search(byline or ""))
+    # 방송사 영상 클립: 본문에 재생+타임코드 패턴 → 영상 내 기자명 노출로 C항 예외
+    is_broadcast  = bool(_BROADCAST_CLIP_RE.search(body))
     c_absent     = not byline or len(byline) < 2
     c_exempt     = bool(byline) and bool(C_EXEMPT_PATTERN.search(byline))
     # 바이라인 첫 단어(공백 이전)가 부서명이면 → 개인명 패턴보다 우선해 부서명 처리
@@ -559,7 +564,7 @@ def analyze_rules(article: dict) -> dict:
         if _tm and bool(_BYLINE_PERSONAL_RE.search(_tm.group(1))):
             has_personal = True
     c_dept       = bool(byline) and not c_exempt and not has_personal and bool(DEPT_PATTERN.search(byline))
-    c_bad        = (c_absent or c_dept) and not is_breaking and not is_robonews
+    c_bad        = (c_absent or c_dept) and not is_breaking and not is_robonews and not is_broadcast
     results["C_byline_missing"] = {
         "violated": c_bad,
         "reason": ("기자명 없음" if c_absent
