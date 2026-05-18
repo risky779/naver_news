@@ -544,7 +544,9 @@ def analyze_rules(article: dict) -> dict:
             if len(w) >= 2 and tw.startswith(w) and len(tw) - len(w) <= 2:
                 return True
         return False
-    t_abused_raw = [w for w, c in Counter(t_words).items() if c >= KEYWORD_REPEAT_TITLE]
+    # 제목 반복 후보: lead_wordset에 있으면 기사 주제어이므로 제외 (수사적 강조 표현 오탐 방지)
+    t_abused_raw = [w for w, c in Counter(t_words).items()
+                    if c >= KEYWORD_REPEAT_TITLE and w not in lead_wordset]
     b_abused_raw = [] if is_photo else [
         w for w, c in Counter(
             w for w in re.findall(r"[가-힣a-zA-Z]{2,}", body)
