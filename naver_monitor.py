@@ -515,20 +515,8 @@ def analyze_rules(article: dict) -> dict:
     results = {}
 
     # B. 클릭베이트 (0.5점) — 과장·왜곡으로 이용자 오인 유발 (규정 제11조 B항)
-    # 케이스2: 정보 은폐형 표현 패턴 (알고보니, 반전 근황 등)
+    # 정보 은폐형 표현 패턴 (알고보니, 반전 근황 등)
     hits = [(label, pat) for pat, label in CLICKBAIT_PATTERNS if re.search(pat, title)]
-    # 케이스1: 인기 검색어가 제목에 있으나 본문 내용과 무관 (DataLab 검증)
-    if body and len(body) >= 500:
-        _title_kws = [w for w in re.findall(r"[가-힣]{2,}", title)
-                      if w.lower() not in L_STOPWORDS]
-        if _title_kws:
-            _body_cnt = Counter(re.findall(r"[가-힣]{2,}", body))
-            _trends   = fetch_keyword_trends(_title_kws[:10])
-            _mismatch = [w for w in _title_kws
-                         if _trends.get(w, 0.0) >= TREND_THRESHOLD
-                         and _body_cnt.get(w, 0) <= 1]
-            if _mismatch:
-                hits.append((f"검색어-본문불일치({','.join(_mismatch[:3])})", ""))
     results["B_clickbait"] = {
         "violated": bool(hits),
         "reason": f"패턴 감지: {', '.join(l for l,_ in hits[:3])}" if hits else "정상",
