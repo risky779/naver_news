@@ -216,10 +216,12 @@ CLICKBAIT_PATTERNS = [
 # E. 선정성: 성적·폭력적 호기심 자극 표현 — 제목에 한해 검사 (규정 제11조 E항)
 # "성적·폭력적 호기심을 자극하는 표현이 사용된 경우"
 SENSATIONAL_TITLE_WORDS = [
-    "성기", "유두", "유륜", "항문", "음모", "전라",
+    "성기", "유두", "유륜", "항문", "전라",
     "성행위", "성교", "성기구", "섹스",
     "토막살인", "엽기살인", "엽기적",
 ]
+# "음모"는 '음모론/음모자/음모설' 등 정치·사회 용어와 구별 필요 → 별도 패턴으로 처리
+_EUMMO_RE = re.compile(r"음모(?!론|자|설|론자)")  # 음모론·음모자·음모설 제외
 SENSATIONAL_TITLE_PATTERNS = [
     (r"경악",                                    "경악 표현"),
     (r"발칵",                                    "발칵 표현"),
@@ -518,6 +520,8 @@ def analyze_rules(article: dict) -> dict:
 
     # E. 선정성 (1점) — 성적·폭력적 호기심 자극 표현 (규정 제11조 E항)
     hit_words    = [w for w in SENSATIONAL_TITLE_WORDS if w in title]
+    if _EUMMO_RE.search(title):
+        hit_words.append("음모")
     hit_patterns = [(label, pat) for pat, label in SENSATIONAL_TITLE_PATTERNS if re.search(pat, title)]
     e_violated   = bool(hit_words or hit_patterns)
     e_reasons    = ([f"선정어: {', '.join(hit_words[:4])}"] if hit_words else []) + \
