@@ -65,7 +65,7 @@ def load_data():
                checks_json, score, violation_text, url
         FROM articles
         WHERE first_seen >= ? AND score > 0
-        ORDER BY score DESC
+        ORDER BY article_date DESC, score DESC
     """, (cutoff,)).fetchall()
     conn.close()
 
