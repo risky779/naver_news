@@ -6,8 +6,9 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 
-DB_FILE   = "C:/Users/admin/naver_monitor.db"
-OUT_FILE  = "C:/Users/admin/docs/index.html"
+DB_FILE      = "C:/Users/admin/naver_monitor.db"
+RANKING_FILE = "C:/Users/admin/press_ranking.json"
+OUT_FILE     = "C:/Users/admin/docs/index.html"
 CANCEL_THRESHOLD = 10.0
 CANCEL_WARNING   = 7.0
 
@@ -29,18 +30,34 @@ ITEM_WEIGHTS = {
 }
 
 def load_data():
+    import json as _json
     conn = sqlite3.connect(DB_FILE)
     cutoff = (datetime.now() - timedelta(days=730)).isoformat()
 
-    rows = conn.execute("""
-        SELECT press_name, press_code,
+    # DB 누적 점수 (기사가 없는 언론사는 0점)
+    db_scores = {row[0]: (row[1], row[2]) for row in conn.execute("""
+        SELECT press_code,
                COALESCE(SUM(score), 0) as total_score,
                COUNT(*) as article_count
         FROM articles
         WHERE first_seen >= ?
         GROUP BY press_code
-        ORDER BY total_score DESC
-    """, (cutoff,)).fetchall()
+    """, (cutoff,)).fetchall()}
+
+    # press_ranking.json 기준 84개사 전체 목록
+    try:
+        with open(RANKING_FILE, encoding="utf-8") as f:
+            ranking = _json.load(f)
+    except FileNotFoundError:
+        ranking = []
+
+    rows = []
+    for entry in ranking:
+        code = entry["code"]
+        name = entry["name"]
+        score, count = db_scores.get(code, (0.0, 0))
+        rows.append((name, code, score, count))
+    rows.sort(key=lambda x: -x[2])
 
     articles = conn.execute("""
         SELECT press_name, press_code, title, byline, article_date,
