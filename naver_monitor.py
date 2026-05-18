@@ -238,7 +238,12 @@ DEPT_PATTERN = re.compile(
     r"(보도|기획)팀|기자단|편집국|미디어팀|뉴스룸"
 )
 
-AI_GENERATION_WORDS   = ["ai가 작성", "ai가 생성", "인공지능이 작성", "chatgpt", "gpt-4", "gemini"]
+AI_GENERATION_WORDS   = ["ai가 작성", "ai가 생성", "인공지능이 작성"]
+# AI 도구명은 단독 언급(인터뷰·기사 소재)과 구별하기 위해 생성 문맥 필요
+AI_TOOL_GENERATION_RE = re.compile(
+    r"(chatgpt|gpt[-\s]?\d|claude|gemini|copilot)\s*(가|로|을|를|이|으로)?\s*(작성|생성|제작|썼|쓴|쓰다|만든|만들)",
+    re.IGNORECASE,
+)
 AI_DISCLOSURE_WORDS   = ["ai 활용", "ai 생성", "인공지능 활용", "[ai]", "(ai)", "ai기술", "생성형 ai"]
 
 # L. 규정: "연속·반복적으로 과도하게" — 단순 언급과 구별하기 위해 높은 임계값 적용
@@ -501,9 +506,10 @@ def analyze_rules(article: dict) -> dict:
     }
 
     # D. AI 미표시 (0.5점) — AI 생성·활용 표시 의무 위반 (규정 제11조 D항)
-    has_ai    = any(w in body_l for w in AI_GENERATION_WORDS)
+    _tool_m   = AI_TOOL_GENERATION_RE.search(body)
+    has_ai    = any(w in body_l for w in AI_GENERATION_WORDS) or bool(_tool_m)
     has_disc  = any(w in body_l for w in AI_DISCLOSURE_WORDS)
-    ai_kw     = next((w for w in AI_GENERATION_WORDS if w in body_l), "")
+    ai_kw     = next((w for w in AI_GENERATION_WORDS if w in body_l), _tool_m.group() if _tool_m else "")
     results["D_ai_undisclosed"] = {
         "violated": has_ai and not has_disc,
         "reason":  "AI 생성 정황 있으나 표시 없음" if (has_ai and not has_disc) else "정상",
