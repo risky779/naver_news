@@ -13,9 +13,12 @@ from collections import Counter, defaultdict
 from datetime import datetime, date, timedelta
 from playwright.async_api import async_playwright
 
-# Windows 터미널 UTF-8 출력 강제 (line_buffering=True: 줄 단위 즉시 flush)
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+def _setup_utf8_stdout():
+    """Windows 터미널 UTF-8 출력 강제 (line_buffering=True: 줄 단위 즉시 flush)"""
+    if hasattr(sys.stdout, "buffer"):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+    if hasattr(sys.stderr, "buffer"):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
 # ── 설정 ────────────────────────────────────────────────────────────────────
 RANKING_FILE  = "press_ranking.json"
@@ -174,6 +177,22 @@ Q_DISCLOSURE_WORDS = [
 R_PRICE_PATTERN = re.compile(r"\d{1,3}(?:,\d{3})*원|\d+만\s*원|\d+천\s*원")
 R_CTA_WORDS = ["구매", "주문", "신청", "예약", "가입", "구독", "결제", "할인"]
 R_PRODUCT_SIGNALS = ["제품", "상품", "출시", "판매", "정가", "정품", "모델명"]
+# 하드뉴스 문맥(법원·노조·정치·사건)이면 R항 제외
+R_NEWS_CONTEXT = [
+    # 법률·사법
+    "법원", "판결", "선고", "기소", "검찰", "경찰", "재판", "소송", "고소",
+    "이행강제금", "가처분", "가압류", "강제집행", "손해배상",
+    # 노동·사회
+    "노조", "파업", "위원장", "단체협약", "노사",
+    # 재난·사고
+    "사망", "부상", "화재", "사고", "지진", "홍수",
+    # 정치·행정
+    "대통령", "국회", "정부", "장관", "의원", "선거",
+    # 정책·복지 지원 (정부 지원금·보조금은 광고성 상품이 아님)
+    "지원금", "보조금", "지원사업", "지원금액", "지원정책",
+    "복지", "수당", "급여", "연금", "보험료",
+    "지자체", "공모", "공공기관",
+]
 
 # B. 클릭베이트: 제목에 충분하지 않은 정보로 이용자 오해 유발 (규정 제11조 B항)
 # "충분하지 않는 정보나 단어를 이용하여 이용자 오해를 유발" — 정보 은폐형 표현
@@ -216,10 +235,11 @@ AI_DISCLOSURE_WORDS   = ["ai 활용", "ai 생성", "인공지능 활용", "[ai]"
 # L. 규정: "연속·반복적으로 과도하게" — 단순 언급과 구별하기 위해 높은 임계값 적용
 KEYWORD_REPEAT_TITLE  = 3   # 제목 내 동일 단어 3회+ (2자 이상)
 KEYWORD_REPEAT_BODY   = 20  # 본문 내 동일 단어 20회+ (2자 이상)
-BODY_LEAD_CHARS       = 200 # 본문 첫 N자 내 등장 단어 = 주제어/인명으로 간주, L항 제외
+BODY_LEAD_CHARS       = 400 # 본문 첫 N자 내 등장 단어 = 주제어/인명으로 간주, L항 제외
 
 # L항 불용어: 검색 조작 목적과 무관한 일반 서술어·조사·부사 제외
 L_STOPWORDS = {
+    # 한국어 불용어
     "있다", "없다", "하다", "되다", "이다", "아니다", "같다", "보다",
     "받다", "주다", "가다", "오다", "나다", "들다", "알다", "모르다",
     "말하다", "밝히다", "전하다", "설명하다", "강조하다", "지적하다",
@@ -228,6 +248,13 @@ L_STOPWORDS = {
     "모든", "이런", "이러한", "그런", "그러한", "이같은", "이같이",
     "또한", "하지만", "그러나", "그리고", "따라서", "때문", "만큼",
     "경우", "상황", "문제", "내용", "방법", "방식", "계획", "예정",
+    # 영어 불용어 (영문 기사 대응)
+    "the", "and", "that", "this", "with", "for", "are", "was", "were",
+    "has", "have", "had", "not", "but", "from", "they", "will", "been",
+    "its", "his", "her", "our", "their", "said", "also", "which", "who",
+    "more", "than", "into", "when", "about", "would", "could", "should",
+    "can", "may", "all", "one", "two", "new", "out", "any", "some",
+    "an", "in", "on", "at", "by", "of", "to", "is", "it", "be", "as",
 }
 
 
@@ -279,11 +306,39 @@ async def get_article_content(page, url: str) -> dict:
 
     title    = await text("#title_area span", ".media_end_head_headline span")
     body     = await text("#newsct_article", "#articeBody", ".go_trans._article_content")
-    byline_r = await text(".media_end_head_journalist_name", ".byline_s", ".journalist_name")
+    byline_r = await text(".media_end_head_journalist_name", ".byline_s", ".byline", ".journalist_name")
     category = await text(".media_end_categorize_item", ".Nnews_category")
     date_str = await text(".media_end_head_info_datestamp_time", "._article_date_time")
 
     byline = re.sub(r"\s*(기자|특파원|기자\s*=).*|@\S+|\s+", " ", byline_r).strip()
+
+    # 바이라인 태그 없을 때 본문 앞/뒤에서 폴백 추출
+    if not byline and body:
+        all_lines = [l.strip() for l in body.strip().splitlines() if l.strip()]
+        # 마지막 5줄: "홍길동 기자", "MBN 문화부 이상주기자"
+        for line in reversed(all_lines[-5:]):
+            m = re.search(r"([가-힣]{2,6})\s*(기자|특파원)$", line)
+            if m:
+                byline = m.group(1)
+                break
+        # 마지막 3줄: 외부 기고 서명 "김만기 KAIST 미래전략대학원 교수"
+        if not byline:
+            EXPERT_TITLE = re.compile(
+                r"(교수|원장|소장|대표|위원장|이사장|이사|연구원|연구위원|센터장|회장|처장|박사|전문위원|논설위원|칼럼니스트)$"
+            )
+            for line in reversed(all_lines[-3:]):
+                if EXPERT_TITLE.search(line) and re.match(r"^[가-힣]{2,4}\s", line):
+                    byline = line
+                    break
+        # 첫 3줄: 영문 기고자명 ("Lee Hyun-sang") + 다음 줄에 "author" 언급
+        if not byline and len(all_lines) >= 2:
+            for i, line in enumerate(all_lines[:3]):
+                next_line = all_lines[i + 1] if i + 1 < len(all_lines) else ""
+                if re.match(r"^[A-Z][a-z]+ [A-Z][a-z\-]+$", line) and \
+                   re.search(r"author|columnist|writer|reporter|correspondent", next_line, re.I):
+                    byline = line
+                    break
+
     return {"title": title, "body": body, "byline": byline,
             "category": category, "date": date_str}
 
@@ -320,11 +375,13 @@ def analyze_rules(article: dict) -> dict:
     }
 
     # C. 바이라인 (1점) — 작성자 식별 정보 부재 (규정 제11조 C항)
-    # 예외: 공동취재팀·특별취재팀·풀단은 책임자 추적 가능 → 위반 아님
-    c_absent = not byline or len(byline) < 2
-    c_exempt = bool(byline) and bool(C_EXEMPT_PATTERN.search(byline))
-    c_dept   = bool(byline) and not c_exempt and bool(DEPT_PATTERN.search(byline))
-    c_bad    = c_absent or c_dept
+    # 예외: 속보 기사, 공동취재팀·특별취재팀·풀단은 적용 제외
+    is_breaking = bool(BREAKING_PATTERN.search(title))
+    c_absent    = not byline or len(byline) < 2
+    c_exempt    = bool(byline) and bool(C_EXEMPT_PATTERN.search(byline))
+    has_personal = bool(byline) and bool(re.match(r"^[가-힣]{2,4}(\s|$)", byline))
+    c_dept      = bool(byline) and not c_exempt and not has_personal and bool(DEPT_PATTERN.search(byline))
+    c_bad       = (c_absent or c_dept) and not is_breaking
     results["C_byline_missing"] = {
         "violated": c_bad,
         "reason": ("기자명 없음" if c_absent
@@ -356,14 +413,22 @@ def analyze_rules(article: dict) -> dict:
     }
 
     # L. 키워드 남용 (1.5점) — 연속·반복적으로 과도하게 특정 검색어 남용 (규정 제11조 L항)
-    t_words      = [w for w in re.findall(r"[가-힣a-zA-Z]{2,}", title) if w not in L_STOPWORDS]
+    t_words       = [w for w in re.findall(r"[가-힣a-zA-Z]{2,}", title) if w not in L_STOPWORDS]
     title_wordset = set(t_words)
     lead_wordset  = set(re.findall(r"[가-힣a-zA-Z]{2,}", body[:BODY_LEAD_CHARS]))
+    # 제목·리드 단어가 본문 단어의 접두어인 경우도 제외 (조사 결합 처리: 교사 → 교사는/교사가)
+    def is_topic_word(w: str) -> bool:
+        if w in title_wordset or w in lead_wordset:
+            return True
+        for tw in title_wordset | lead_wordset:
+            if len(tw) >= 2 and w.startswith(tw) and len(w) - len(tw) <= 2:
+                return True
+        return False
     t_abused = [w for w, c in Counter(t_words).items() if c >= KEYWORD_REPEAT_TITLE]
     b_abused = [] if is_photo else [
         w for w, c in Counter(
             w for w in re.findall(r"[가-힣a-zA-Z]{2,}", body)
-            if w not in L_STOPWORDS and w not in title_wordset and w not in lead_wordset
+            if w not in L_STOPWORDS and not is_topic_word(w)
         ).items()
         if c >= KEYWORD_REPEAT_BODY
     ][:5]
@@ -398,7 +463,8 @@ def analyze_rules(article: dict) -> dict:
     cta_hits   = [w for w in R_CTA_WORDS if w in body]
     prod_hits  = [w for w in R_PRODUCT_SIGNALS if w in body]
     has_r_disc = any(d in body_lower for d in Q_DISCLOSURE_WORDS)
-    r_violated = has_price and len(cta_hits) >= 2 and bool(prod_hits) and not has_r_disc
+    is_hard_news = any(w in body for w in R_NEWS_CONTEXT)
+    r_violated = has_price and len(cta_hits) >= 2 and bool(prod_hits) and not has_r_disc and not is_hard_news
     r_price_m  = R_PRICE_PATTERN.search(body)
     results["R_commercial"] = {
         "violated": r_violated,
@@ -649,6 +715,9 @@ async def main():
                 try:
                     content = await get_article_content(page, url)
                     art.update(content)
+                    # 제목 없으면 동영상 전용 또는 크롤링 실패 → 건너뜀
+                    if not art.get("title", "").strip():
+                        continue
                     # 분기 내 기사 필터
                     art_date = parse_article_date(art.get("date", ""))
                     if art_date and not (QUARTER_START <= art_date <= QUARTER_END):
@@ -721,4 +790,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    _setup_utf8_stdout()
     asyncio.run(main())
