@@ -242,13 +242,15 @@ C_EXEMPT_PATTERN = re.compile(
 )
 # AI 자동생성 기사 공시 문구 — 작성자=알고리즘임을 명시한 경우 C항 예외
 ROBONEWS_PATTERN = re.compile(
-    r"자동\s*생성\s*알고리즘|로봇\s*(기자|뉴스|저널리즘)|AI\s*(기자|뉴스)|알고리즘에\s*의해\s*(실시간으로\s*)?작성",
+    r"자동\s*생성\s*알고리즘|로봇\s*(기자|뉴스|저널리즘|기사)|AI\s*(기자|뉴스)|알고리즘에\s*의해\s*(실시간으로\s*)?작성",
     re.IGNORECASE
 )
+# 바이라인이 봇으로 끝나면 로봇기사로 간주 (C-APT봇, 웨더봇 등) — C항 예외
+_BOTBYLINE_RE = re.compile(r"봇$")
+
 DEPT_PATTERN = re.compile(
     r"(온라인|디지털|편집|인터넷|모바일|소셜|뉴미디어).*(팀|부|국|센터)|"
     r"(보도|기획)팀|기자단|편집국|미디어팀|뉴스룸|"
-    r"봇$|"                                        # 로봇/자동생성 바이라인 (예: C-APT봇)
     r"^(KBS|YTN|MBC|SBS|JTBC|채널A|TV조선|MBN|C-APT)|"  # 방송사·기관명만 기재
     r"(Herald|Times|News|Tribune)\s+[a-z]{3,}$"   # 매체명+이메일ID (예: Korea Herald khnews)
 )
@@ -526,7 +528,8 @@ def analyze_rules(article: dict) -> dict:
     # C. 바이라인 (1점) — 작성자 식별 정보 부재 (규정 제11조 C항)
     # 예외: 속보 기사, 공동취재팀·특별취재팀·풀단, AI 자동생성 공시 기사
     is_breaking  = bool(BREAKING_PATTERN.search(title))
-    is_robonews  = bool(ROBONEWS_PATTERN.search(body))
+    # 본문의 로봇기사 공시 OR 바이라인 자체가 봇으로 끝나는 경우 (C-APT봇, 웨더봇 등)
+    is_robonews  = bool(ROBONEWS_PATTERN.search(body)) or bool(_BOTBYLINE_RE.search(byline or ""))
     c_absent     = not byline or len(byline) < 2
     c_exempt     = bool(byline) and bool(C_EXEMPT_PATTERN.search(byline))
     # DEPT_PATTERN을 먼저 평가: 부서명/방송사명이 개인명 패턴보다 우선
