@@ -215,7 +215,8 @@ AI_DISCLOSURE_WORDS   = ["ai 활용", "ai 생성", "인공지능 활용", "[ai]"
 
 # L. 규정: "연속·반복적으로 과도하게" — 단순 언급과 구별하기 위해 높은 임계값 적용
 KEYWORD_REPEAT_TITLE  = 3   # 제목 내 동일 단어 3회+ (2자 이상)
-KEYWORD_REPEAT_BODY   = 15  # 본문 내 동일 단어 15회+ (2자 이상)
+KEYWORD_REPEAT_BODY   = 20  # 본문 내 동일 단어 20회+ (2자 이상)
+BODY_LEAD_CHARS       = 200 # 본문 첫 N자 내 등장 단어 = 주제어/인명으로 간주, L항 제외
 
 # L항 불용어: 검색 조작 목적과 무관한 일반 서술어·조사·부사 제외
 L_STOPWORDS = {
@@ -355,11 +356,14 @@ def analyze_rules(article: dict) -> dict:
     }
 
     # L. 키워드 남용 (1.5점) — 연속·반복적으로 과도하게 특정 검색어 남용 (규정 제11조 L항)
-    t_words  = [w for w in re.findall(r"[가-힣a-zA-Z]{2,}", title) if w not in L_STOPWORDS]
+    t_words      = [w for w in re.findall(r"[가-힣a-zA-Z]{2,}", title) if w not in L_STOPWORDS]
+    title_wordset = set(t_words)
+    lead_wordset  = set(re.findall(r"[가-힣a-zA-Z]{2,}", body[:BODY_LEAD_CHARS]))
     t_abused = [w for w, c in Counter(t_words).items() if c >= KEYWORD_REPEAT_TITLE]
     b_abused = [] if is_photo else [
         w for w, c in Counter(
-            w for w in re.findall(r"[가-힣a-zA-Z]{2,}", body) if w not in L_STOPWORDS
+            w for w in re.findall(r"[가-힣a-zA-Z]{2,}", body)
+            if w not in L_STOPWORDS and w not in title_wordset and w not in lead_wordset
         ).items()
         if c >= KEYWORD_REPEAT_BODY
     ][:5]
