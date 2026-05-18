@@ -34,6 +34,9 @@ def load_data():
     conn = sqlite3.connect(DB_FILE)
     cutoff = (datetime.now() - timedelta(days=730)).isoformat()
 
+    # 실제 DB 데이터 시작일
+    earliest = conn.execute("SELECT MIN(first_seen) FROM articles").fetchone()[0]
+
     # DB 누적 점수 (기사가 없는 언론사는 0점)
     db_scores = {row[0]: (row[1], row[2]) for row in conn.execute("""
         SELECT press_code,
@@ -68,7 +71,7 @@ def load_data():
     """, (cutoff,)).fetchall()
 
     conn.close()
-    return rows, articles
+    return rows, articles, earliest
 
 def status_badge(score):
     if score >= CANCEL_THRESHOLD:
@@ -83,9 +86,14 @@ def score_bar(score, max_score=20):
     color = "#e74c3c" if score >= CANCEL_THRESHOLD else "#f39c12" if score >= CANCEL_WARNING else "#27ae60"
     return f'<div class="bar-wrap"><div class="bar" style="width:{pct:.1f}%;background:{color}"></div><span class="bar-label">{score:.1f}점</span></div>'
 
-def make_html(rows, articles):
+def make_html(rows, articles, earliest=None):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    cutoff_label = (datetime.now() - timedelta(days=730)).strftime("%Y-%m-%d")
+    if earliest:
+        start_label = earliest[:10]
+        delta = datetime.now() - datetime.fromisoformat(earliest)
+        period_label = f"{start_label} ~ 현재 ({delta.days}일)"
+    else:
+        period_label = "데이터 없음"
 
     danger  = [r for r in rows if r[2] >= CANCEL_THRESHOLD]
     warning = [r for r in rows if CANCEL_WARNING <= r[2] < CANCEL_THRESHOLD]
@@ -197,7 +205,7 @@ def make_html(rows, articles):
 <body>
 <header>
   <h1>네이버 뉴스 품질 모니터링</h1>
-  <div class="meta">마지막 업데이트: {now} &nbsp;|&nbsp; 평가 기간: 최근 24개월 ({cutoff_label} ~ 현재) &nbsp;|&nbsp; 규정: 제14조 제10항</div>
+  <div class="meta">마지막 업데이트: {now} &nbsp;|&nbsp; 누적 데이터 기간: {period_label} &nbsp;|&nbsp; 규정: 제14조 제10항 (24개월 누적 10점 이상 → 해지권고)</div>
 </header>
 <div class="container">
   {summary_cards}
@@ -270,11 +278,11 @@ def make_violation_detail(press_name, arts):
 if __name__ == "__main__":
     import os
     os.makedirs(os.path.dirname(OUT_FILE), exist_ok=True)
-    rows, articles = load_data()
+    rows, articles, earliest = load_data()
     if not rows:
         print("DB에 데이터가 없습니다.")
     else:
-        html = make_html(rows, articles)
+        html = make_html(rows, articles, earliest)
         with open(OUT_FILE, "w", encoding="utf-8") as f:
             f.write(html)
         print(f"생성 완료: {OUT_FILE}  ({len(rows)}개 언론사)")

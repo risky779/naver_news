@@ -57,6 +57,8 @@ def init_db(conn: sqlite3.Connection) -> None:
     cols = [row[1] for row in conn.execute("PRAGMA table_info(articles)").fetchall()]
     if "violation_text" not in cols:
         conn.execute("ALTER TABLE articles ADD COLUMN violation_text TEXT")
+    if "body" not in cols:
+        conn.execute("ALTER TABLE articles ADD COLUMN body TEXT")
     conn.commit()
 
 
@@ -91,13 +93,13 @@ def save_to_db(conn: sqlite3.Connection, url: str, art: dict,
     conn.execute("""
         INSERT OR IGNORE INTO articles
             (url, press_code, press_name, title, article_date, byline,
-             first_seen, checks_json, score, violation_text)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             first_seen, checks_json, score, violation_text, body)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (url, press_code, press_name,
           art.get("title", ""), art.get("date", ""), art.get("byline", ""),
           datetime.now().isoformat(),
           json.dumps(checks_to_save, ensure_ascii=False),
-          score, violation_text))
+          score, violation_text, art.get("body", "")))
     conn.commit()
 
 # 포토기사 제목 패턴 (L항목 예외 처리)
@@ -214,6 +216,18 @@ AI_DISCLOSURE_WORDS   = ["ai 활용", "ai 생성", "인공지능 활용", "[ai]"
 # L. 규정: "연속·반복적으로 과도하게" — 단순 언급과 구별하기 위해 높은 임계값 적용
 KEYWORD_REPEAT_TITLE  = 3   # 제목 내 동일 단어 3회+ (2자 이상)
 KEYWORD_REPEAT_BODY   = 15  # 본문 내 동일 단어 15회+ (2자 이상)
+
+# L항 불용어: 검색 조작 목적과 무관한 일반 서술어·조사·부사 제외
+L_STOPWORDS = {
+    "있다", "없다", "하다", "되다", "이다", "아니다", "같다", "보다",
+    "받다", "주다", "가다", "오다", "나다", "들다", "알다", "모르다",
+    "말하다", "밝히다", "전하다", "설명하다", "강조하다", "지적하다",
+    "위해", "통해", "대해", "관해", "따라", "위한", "관련", "대한",
+    "이후", "이전", "현재", "최근", "지난", "다음", "이번", "당시",
+    "모든", "이런", "이러한", "그런", "그러한", "이같은", "이같이",
+    "또한", "하지만", "그러나", "그리고", "따라서", "때문", "만큼",
+    "경우", "상황", "문제", "내용", "방법", "방식", "계획", "예정",
+}
 
 
 # ── 기사 목록 수집 ───────────────────────────────────────────────────────────
@@ -341,10 +355,12 @@ def analyze_rules(article: dict) -> dict:
     }
 
     # L. 키워드 남용 (1.5점) — 연속·반복적으로 과도하게 특정 검색어 남용 (규정 제11조 L항)
-    t_words  = re.findall(r"[가-힣a-zA-Z]{2,}", title)
+    t_words  = [w for w in re.findall(r"[가-힣a-zA-Z]{2,}", title) if w not in L_STOPWORDS]
     t_abused = [w for w, c in Counter(t_words).items() if c >= KEYWORD_REPEAT_TITLE]
     b_abused = [] if is_photo else [
-        w for w, c in Counter(re.findall(r"[가-힣a-zA-Z]{2,}", body)).items()
+        w for w, c in Counter(
+            w for w in re.findall(r"[가-힣a-zA-Z]{2,}", body) if w not in L_STOPWORDS
+        ).items()
         if c >= KEYWORD_REPEAT_BODY
     ][:5]
     l_reasons = []
