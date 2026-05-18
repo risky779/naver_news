@@ -32,7 +32,7 @@ def _setup_utf8_stdout():
 # ── 설정 ────────────────────────────────────────────────────────────────────
 RANKING_FILE  = "press_ranking.json"
 DB_FILE       = "naver_monitor.db"
-TIER_CONFIG        = [(15.0, 50), (8.0, 20), (0.0, 10)]
+TIER_ARTS          = [50, 20, 10]   # 상위·중위·하위 1/3 최대 수집 건수
 HEADLESS           = True
 MONITOR_START      = date(2026, 4, 1)
 CANCEL_THRESHOLD   = 10.0   # 제14조 제10항: 24개월 누적 이 이상 → 제휴 해지 권고
@@ -879,7 +879,7 @@ async def main():
     print(f"\n{'='*65}")
     print(f"  네이버 뉴스 품질 모니터링  |  언론사 {len(press_ranking)}곳 비교")
     print(f"  평가 기간: {QUARTER_START} ~ {QUARTER_END}  (현재 분기)")
-    print(f"  계층: 감점 15↑=50건 / 8↑=20건 / 기타=10건")
+    print(f"  계층: 상위1/3=50건 / 중위1/3=20건 / 하위1/3=10건")
     print(f"{'='*65}")
 
     all_press_results = []   # [{name, code, results}, ...]
