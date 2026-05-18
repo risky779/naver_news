@@ -89,9 +89,11 @@ def score_bar(score, max_score=20):
 def make_html(rows, articles, earliest=None):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     if earliest:
+        from datetime import date as _date
         start_label = earliest[:10]
-        delta = datetime.now() - datetime.fromisoformat(earliest)
-        period_label = f"{start_label} ~ 현재 ({delta.days}일)"
+        start_date = datetime.fromisoformat(earliest).date()
+        delta_days = (_date.today() - start_date).days
+        period_label = f"{start_label} ~ 현재 ({delta_days}일)"
     else:
         period_label = "데이터 없음"
 
