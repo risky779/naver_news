@@ -29,15 +29,14 @@ ITEM_WEIGHTS = {
     "Q_paid_article": 1.5, "R_commercial": 1.0,
 }
 
+
 def load_data():
     import json as _json
     conn = sqlite3.connect(DB_FILE)
     cutoff = (datetime.now() - timedelta(days=730)).isoformat()
 
-    # 실제 DB 데이터 시작일
     earliest = conn.execute("SELECT MIN(first_seen) FROM articles").fetchone()[0]
 
-    # DB 누적 점수 (기사가 없는 언론사는 0점)
     db_scores = {row[0]: (row[1], row[2]) for row in conn.execute("""
         SELECT press_code,
                COALESCE(SUM(score), 0) as total_score,
@@ -47,7 +46,6 @@ def load_data():
         GROUP BY press_code
     """, (cutoff,)).fetchall()}
 
-    # press_ranking.json 기준 84개사 전체 목록
     try:
         with open(RANKING_FILE, encoding="utf-8") as f:
             ranking = _json.load(f)
@@ -62,16 +60,37 @@ def load_data():
         rows.append((name, code, score, count))
     rows.sort(key=lambda x: -x[2])
 
-    articles = conn.execute("""
+    raw_articles = conn.execute("""
         SELECT press_name, press_code, title, byline, article_date,
                checks_json, score, violation_text, url
         FROM articles
         WHERE first_seen >= ? AND score > 0
-        ORDER BY press_name, score DESC
+        ORDER BY score DESC
     """, (cutoff,)).fetchall()
-
     conn.close()
-    return rows, articles, earliest
+
+    # press_code 기준으로 기사 데이터를 JS용 dict로 변환
+    art_data = {}
+    for a in raw_articles:
+        code = a[1]
+        try:
+            checks = json.loads(a[5] or "{}")
+        except Exception:
+            checks = {}
+        tags = [f"{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점" for k in checks]
+        vio_lines = [l.strip() for l in (a[7] or "").split("\n") if l.strip()]
+        art_data.setdefault(code, []).append({
+            "title":   a[2] or "",
+            "byline":  a[3] or "(없음)",
+            "date":    a[4] or "",
+            "score":   round(float(a[6] or 0), 1),
+            "tags":    tags,
+            "vioText": vio_lines,
+            "url":     a[8] or "#",
+        })
+
+    return rows, art_data, earliest
+
 
 def status_badge(score):
     if score >= CANCEL_THRESHOLD:
@@ -81,18 +100,22 @@ def status_badge(score):
     else:
         return '<span class="badge ok">정상</span>'
 
+
 def score_bar(score, max_score=20):
     pct = min(score / max_score * 100, 100)
     color = "#e74c3c" if score >= CANCEL_THRESHOLD else "#f39c12" if score >= CANCEL_WARNING else "#27ae60"
-    return f'<div class="bar-wrap"><div class="bar" style="width:{pct:.1f}%;background:{color}"></div><span class="bar-label">{score:.1f}점</span></div>'
+    return (f'<div class="bar-wrap">'
+            f'<div class="bar" style="width:{pct:.1f}%;background:{color}"></div>'
+            f'<span class="bar-label">{score:.1f}점</span></div>')
 
-def make_html(rows, articles, earliest=None):
+
+def make_html(rows, art_data, earliest=None):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     if earliest:
         from datetime import date as _date
         start_label = earliest[:10]
-        start_date = datetime.fromisoformat(earliest).date()
-        delta_days = (_date.today() - start_date).days
+        start_date  = datetime.fromisoformat(earliest).date()
+        delta_days  = (_date.today() - start_date).days
         period_label = f"{start_label} ~ 현재 ({delta_days}일)"
     else:
         period_label = "데이터 없음"
@@ -101,15 +124,6 @@ def make_html(rows, articles, earliest=None):
     warning = [r for r in rows if CANCEL_WARNING <= r[2] < CANCEL_THRESHOLD]
     normal  = [r for r in rows if r[2] < CANCEL_WARNING]
 
-    # 언론사별 위반 기사 그룹핑
-    art_by_press = {}
-    for a in articles:
-        press_name = a[0]
-        if press_name not in art_by_press:
-            art_by_press[press_name] = []
-        art_by_press[press_name].append(a)
-
-    # 랭킹 테이블 행
     rank_rows = ""
     for i, (name, code, score, count) in enumerate(rows, 1):
         badge = status_badge(score)
@@ -123,11 +137,13 @@ def make_html(rows, articles, earliest=None):
         </tr>
         <tr id="detail-{code}" class="detail-row" style="display:none">
           <td colspan="4">
-            {make_violation_detail(name, art_by_press.get(name, []))}
+            <div id="vdetail-{code}">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>"""
 
-    # 요약 카드
     summary_cards = f"""
     <div class="cards">
       <div class="card danger-card">
@@ -147,6 +163,8 @@ def make_html(rows, articles, earliest=None):
         <div class="card-label">총 언론사</div>
       </div>
     </div>"""
+
+    art_data_json = json.dumps(art_data, ensure_ascii=False)
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
@@ -192,7 +210,6 @@ def make_html(rows, articles, earliest=None):
   .bar {{ height: 8px; border-radius: 4px; min-width: 2px; transition: width .3s; }}
   .bar-label {{ font-size: 12px; color: var(--sub); white-space: nowrap; }}
   .detail-row td {{ background: #f8f9fc; padding: 12px 16px; }}
-  .vio-list {{ list-style: none; }}
   .vio-item {{ border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }}
   .vio-title {{ font-weight: 600; font-size: 13px; margin-bottom: 4px; }}
   .vio-meta {{ font-size: 11px; color: var(--sub); margin-bottom: 6px; }}
@@ -200,8 +217,21 @@ def make_html(rows, articles, earliest=None):
               background: #ffeaea; color: var(--danger); margin-right: 4px; margin-bottom: 2px; }}
   .vio-text {{ font-size: 11px; color: #576574; margin-top: 4px; border-left: 3px solid var(--border); padding-left: 8px; }}
   .no-vio {{ color: var(--sub); font-size: 13px; padding: 8px 0; }}
+  .page-info {{ font-size: 12px; color: var(--sub); text-align: right; margin-bottom: 8px; }}
+  .pager {{ display: flex; gap: 4px; justify-content: center; padding: 12px 0 4px; flex-wrap: wrap; }}
+  .pager button {{
+    border: 1px solid var(--border); background: #fff; padding: 4px 10px;
+    border-radius: 4px; cursor: pointer; font-size: 13px; min-width: 32px;
+    transition: background .1s;
+  }}
+  .pager button:hover:not(:disabled) {{ background: #f1f2f6; }}
+  .pager button.active {{ background: #2f3542; color: #fff; border-color: #2f3542; }}
+  .pager button:disabled {{ opacity: 0.35; cursor: default; }}
+  .pager .pager-ellipsis {{ padding: 4px 6px; font-size: 13px; color: var(--sub); line-height: 1.8; }}
   footer {{ text-align: center; color: var(--sub); font-size: 12px; padding: 32px 16px; }}
-  @media (max-width: 600px) {{ .cards {{ gap: 8px; }} .card {{ min-width: 80px; padding: 12px; }} .card-num {{ font-size: 24px; }} }}
+  @media (max-width: 600px) {{
+    .cards {{ gap: 8px; }} .card {{ min-width: 80px; padding: 12px; }} .card-num {{ font-size: 24px; }}
+  }}
 </style>
 </head>
 <body>
@@ -227,64 +257,93 @@ def make_html(rows, articles, earliest=None):
 </div>
 <footer>네이버 뉴스 제휴 심사 및 운영 평가 규정 (2026.02.11) 기준 &nbsp;|&nbsp; 해지 기준: 24개월 누적 10점 이상</footer>
 <script>
+const VDATA = {art_data_json};
+const PAGE_SIZE = 10;
+const curPage = {{}};
+
+function esc(s) {{
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}}
+
 function toggleDetail(code) {{
-  const el = document.getElementById('detail-' + code);
-  el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+  const row = document.getElementById('detail-' + code);
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  if (!open) renderPage(code, curPage[code] || 1);
+}}
+
+function renderPage(code, page) {{
+  curPage[code] = page;
+  const arts = VDATA[code] || [];
+  const total = arts.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  page = Math.min(Math.max(1, page), totalPages);
+
+  const wrap    = document.getElementById('vdetail-' + code);
+  const ctr     = wrap.querySelector('.vio-container');
+  const pagerEl = wrap.querySelector('.pager');
+
+  if (total === 0) {{
+    ctr.innerHTML = '<p class="no-vio">위반 의심 기사 없음</p>';
+    pagerEl.innerHTML = '';
+    return;
+  }}
+
+  const slice = arts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  ctr.innerHTML =
+    `<div class="page-info">${{page}}/${{totalPages}} 페이지 &nbsp;(총 ${{total}}건)</div>` +
+    slice.map(a => {{
+      const tags    = a.tags.map(t => `<span class="vio-tag">${{esc(t)}}</span>`).join('');
+      const viLines = a.vioText.map(l => `<div class="vio-text">${{esc(l)}}</div>`).join('');
+      return `<div class="vio-item">
+        <div class="vio-title"><a href="${{esc(a.url)}}" target="_blank" style="color:inherit;text-decoration:none">${{esc(a.title)}}</a></div>
+        <div class="vio-meta">기자: ${{esc(a.byline)}} &nbsp;|&nbsp; ${{esc(a.date)}} &nbsp;|&nbsp; 감점: ${{a.score.toFixed(1)}}점</div>
+        <div>${{tags}}</div>${{viLines}}
+      </div>`;
+    }}).join('');
+
+  pagerEl.innerHTML = totalPages <= 1 ? '' : buildPager(code, page, totalPages);
+}}
+
+function buildPager(code, cur, total) {{
+  const btn = (p, label, disabled, active) =>
+    `<button onclick="renderPage('${{code}}',${{p}})"
+             ${{disabled ? 'disabled' : ''}}
+             class="${{active ? 'active' : ''}}">${{label}}</button>`;
+
+  let html = btn(cur - 1, '‹ 이전', cur === 1, false);
+
+  // 슬라이딩 윈도우: 현재 ±2, 항상 첫·끝 페이지, 중간은 … 생략
+  const pages = new Set([1, total]);
+  for (let p = Math.max(1, cur - 2); p <= Math.min(total, cur + 2); p++) pages.add(p);
+  const sorted = Array.from(pages).sort((a,b)=>a-b);
+
+  let prev = 0;
+  for (const p of sorted) {{
+    if (prev && p - prev > 1) html += '<span class="pager-ellipsis">…</span>';
+    html += btn(p, p, false, p === cur);
+    prev = p;
+  }}
+
+  html += btn(cur + 1, '다음 ›', cur === total, false);
+  return html;
 }}
 </script>
 </body>
 </html>"""
 
 
-def make_violation_detail(press_name, arts):
-    if not arts:
-        return '<p class="no-vio">위반 의심 기사 없음</p>'
-
-    items_html = ""
-    for a in arts[:20]:
-        title    = a[2] or ""
-        byline   = a[3] or "(없음)"
-        date_str = a[4] or ""
-        checks_json = a[5] or "{}"
-        score    = a[6] or 0
-        vio_text = a[7] or ""
-        url      = a[8] or "#"
-
-        try:
-            checks = json.loads(checks_json)
-        except Exception:
-            checks = {}
-
-        tags = "".join(
-            f'<span class="vio-tag">{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점</span>'
-            for k in checks
-        )
-
-        vio_lines = ""
-        if vio_text:
-            for line in vio_text.split("\n"):
-                if line.strip():
-                    vio_lines += f'<div class="vio-text">{line.strip()}</div>'
-
-        items_html += f"""
-        <li class="vio-item">
-          <div class="vio-title"><a href="{url}" target="_blank" style="color:inherit;text-decoration:none">{title}</a></div>
-          <div class="vio-meta">기자: {byline} &nbsp;|&nbsp; {date_str} &nbsp;|&nbsp; 감점: {score:.1f}점</div>
-          <div>{tags}</div>
-          {vio_lines}
-        </li>"""
-
-    return f'<ul class="vio-list">{items_html}</ul>'
-
-
 if __name__ == "__main__":
     import os
     os.makedirs(os.path.dirname(OUT_FILE), exist_ok=True)
-    rows, articles, earliest = load_data()
+    rows, art_data, earliest = load_data()
     if not rows:
         print("DB에 데이터가 없습니다.")
     else:
-        html = make_html(rows, articles, earliest)
+        html = make_html(rows, art_data, earliest)
         with open(OUT_FILE, "w", encoding="utf-8") as f:
             f.write(html)
         print(f"생성 완료: {OUT_FILE}  ({len(rows)}개 언론사)")

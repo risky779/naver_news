@@ -42,7 +42,6 @@
   .bar { height: 8px; border-radius: 4px; min-width: 2px; transition: width .3s; }
   .bar-label { font-size: 12px; color: var(--sub); white-space: nowrap; }
   .detail-row td { background: #f8f9fc; padding: 12px 16px; }
-  .vio-list { list-style: none; }
   .vio-item { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
   .vio-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
   .vio-meta { font-size: 11px; color: var(--sub); margin-bottom: 6px; }
@@ -50,14 +49,27 @@
               background: #ffeaea; color: var(--danger); margin-right: 4px; margin-bottom: 2px; }
   .vio-text { font-size: 11px; color: #576574; margin-top: 4px; border-left: 3px solid var(--border); padding-left: 8px; }
   .no-vio { color: var(--sub); font-size: 13px; padding: 8px 0; }
+  .page-info { font-size: 12px; color: var(--sub); text-align: right; margin-bottom: 8px; }
+  .pager { display: flex; gap: 4px; justify-content: center; padding: 12px 0 4px; flex-wrap: wrap; }
+  .pager button {
+    border: 1px solid var(--border); background: #fff; padding: 4px 10px;
+    border-radius: 4px; cursor: pointer; font-size: 13px; min-width: 32px;
+    transition: background .1s;
+  }
+  .pager button:hover:not(:disabled) { background: #f1f2f6; }
+  .pager button.active { background: #2f3542; color: #fff; border-color: #2f3542; }
+  .pager button:disabled { opacity: 0.35; cursor: default; }
+  .pager .pager-ellipsis { padding: 4px 6px; font-size: 13px; color: var(--sub); line-height: 1.8; }
   footer { text-align: center; color: var(--sub); font-size: 12px; padding: 32px 16px; }
-  @media (max-width: 600px) { .cards { gap: 8px; } .card { min-width: 80px; padding: 12px; } .card-num { font-size: 24px; } }
+  @media (max-width: 600px) {
+    .cards { gap: 8px; } .card { min-width: 80px; padding: 12px; } .card-num { font-size: 24px; }
+  }
 </style>
 </head>
 <body>
 <header>
   <h1>네이버 뉴스 품질 모니터링</h1>
-  <div class="meta">마지막 업데이트: 2026-05-18 18:27 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (2일) &nbsp;|&nbsp; 규정: 제14조 제10항 (24개월 누적 10점 이상 → 해지권고)</div>
+  <div class="meta">마지막 업데이트: 2026-05-18 18:34 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (2일) &nbsp;|&nbsp; 규정: 제14조 제10항 (24개월 누적 10점 이상 → 해지권고)</div>
 </header>
 <div class="container">
   
@@ -98,91 +110,10 @@
         </tr>
         <tr id="detail-449" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345535" target="_blank" style="color:inherit;text-decoration:none">360km 굉음 내며 달리다…바이크 산산조각 공중부양 [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:34 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345533" target="_blank" style="color:inherit;text-decoration:none">한동훈 본 젊은 남성 “나라를 살려주세요” [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:20 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345530" target="_blank" style="color:inherit;text-decoration:none">바다 위 배 한 가득…이란 국영방송, 호르무즈 해협 최근 영상 공개 [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:07 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345529" target="_blank" style="color:inherit;text-decoration:none">레이저로 ‘쾅’ 트럼프, 이란 군용기 격추 AI 영상 무더기로 올린 트럼프…이란에 “시간 얼마 없다” 압박도 [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:03 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345563" target="_blank" style="color:inherit;text-decoration:none">“손가락질 하지마!!”…정원오 ‘폭행’ 논란에 고성·손가락질 [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:46 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345562" target="_blank" style="color:inherit;text-decoration:none">화장실도 안 가는 로봇?…인간과 100시간 째 택배 분류 대결 중 [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:43 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345561" target="_blank" style="color:inherit;text-decoration:none">MC몽, 긴급 방송 폭로 예고 “불법도박 연예인 폭로할 것” [자막뉴스]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:21 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345558" target="_blank" style="color:inherit;text-decoration:none">“호르무즈 해협 봉쇄 계속” 강습상륙함·전투기 총동원하며 이란 최대 압박하는 美 [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:12 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345556" target="_blank" style="color:inherit;text-decoration:none">칸에 간 나홍진 ‘호프’…뜨거운 현지반응에 수상 기대감 ↑ [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 1:52 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345554" target="_blank" style="color:inherit;text-decoration:none">[날씨]오늘도 8월 더위…강한 자외선 유의</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 1:38 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345416" target="_blank" style="color:inherit;text-decoration:none">조국 “당선되면 민주진보 진영 연대·통합을 주도적으로 하겠다” [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.16. 오후 6:27 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345583" target="_blank" style="color:inherit;text-decoration:none">“무소속이면 안 X팔려요?”…한동훈에 돌직구 초등학생 [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:03 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345582" target="_blank" style="color:inherit;text-decoration:none">‘칼든 뺑소니범’ 추격해 맨손으로 검거…용감한 시민들 [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 4:50 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345581" target="_blank" style="color:inherit;text-decoration:none">이란 여성들도 총 잡았다? 앵커부터 주부까지 “목숨 바칠 것”…대미 항전 의지 불태워 [현장영상]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 4:40 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-449">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('003')" class="press-row">
@@ -193,85 +124,10 @@
         </tr>
         <tr id="detail-003" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013951162" target="_blank" style="color:inherit;text-decoration:none">인사하는 이재명 대통령</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:26 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013951160" target="_blank" style="color:inherit;text-decoration:none">이재명 대통령, 5·18민주화운동 기념식 기념사</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:26 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013951811" target="_blank" style="color:inherit;text-decoration:none">국민의힘, 정원오 후보 공직선거법상 허위사실공표죄 고발장 제출</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:38 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013951810" target="_blank" style="color:inherit;text-decoration:none">정원오 고발장 접수하는 곽규택 클린선거본부장</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:38 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013951808" target="_blank" style="color:inherit;text-decoration:none">국민의힘, 정원오 후보 공직선거법상 허위사실공표죄 고발장 제출</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:38 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013951807" target="_blank" style="color:inherit;text-decoration:none">국민의힘, 정원오 후보 공직선거법상 허위사실공표죄 고발장 제출</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:38 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013951806" target="_blank" style="color:inherit;text-decoration:none">국민의힘, 정원오 후보 공직선거법상 허위사실공표죄 고발장 제출</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:38 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013951805" target="_blank" style="color:inherit;text-decoration:none">고발장 접수 위해 서울경찰청 향하는 곽규택</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:38 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013951804" target="_blank" style="color:inherit;text-decoration:none">고발장 접수 위해 서울경찰청 향하는 곽규택</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:38 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013952420" target="_blank" style="color:inherit;text-decoration:none">남광주시장 방문한 이재명 대통령</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:52 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013952418" target="_blank" style="color:inherit;text-decoration:none">남광주시장 방문한 이재명 대통령</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:52 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013952417" target="_blank" style="color:inherit;text-decoration:none">이재명 대통령, 남광주시장 방문</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:52 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013952416" target="_blank" style="color:inherit;text-decoration:none">5·18민주묘지 참배하는 이재명 대통령</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:52 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-003">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('030')" class="press-row">
@@ -282,37 +138,10 @@
         </tr>
         <tr id="detail-030" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/030/0003428718" target="_blank" style="color:inherit;text-decoration:none">롯데온, '엘타운 슈퍼위크' 진행…여름 상품 특가 강화</a></div>
-          <div class="vio-meta">기자: 윤희석 pioneer &nbsp;|&nbsp; 2026.05.18. 오후 2:46 &nbsp;|&nbsp; 감점: 1.5점</div>
-          <div><span class="vio-tag">Q.유가기사 1.5점</span></div>
-          <div class="vio-text">[Q.유가기사 전송] …지 일주일간 엘타운 슈퍼위크를 연다고 18일 밝혔다. 여름 시즌 수요를 겨냥한 숙박·식품·리빙 상품 중심의 할인 혜택을 선보인다.</div><div class="vio-text">대표 상품은 7~8월 극성수기 예약이 가능한 롯데호텔앤리조트의 '롯데호텔 제주 패키지'다…</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/030/0003428826" target="_blank" style="color:inherit;text-decoration:none">[부음] 김세인(대한축구협회 여자축구팀장)씨 시부상</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:33 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/030/0003428825" target="_blank" style="color:inherit;text-decoration:none">[부음] 김민규(춘천시육상연맹회장)씨 장모상</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:33 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/030/0003428824" target="_blank" style="color:inherit;text-decoration:none">[부음] 최병호(법무법인 태평양 변호사)씨 모친상</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:32 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/030/0003428823" target="_blank" style="color:inherit;text-decoration:none">[부음] 이로물로(평화방송 미디어본부장)씨 장모상</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:32 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-030">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('015')" class="press-row">
@@ -323,31 +152,10 @@
         </tr>
         <tr id="detail-015" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/015/0005288373" target="_blank" style="color:inherit;text-decoration:none">품질경영학회, 대한상의서 학술대회</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 6:08 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/015/0005288372" target="_blank" style="color:inherit;text-decoration:none">[부고] 윤복순씨 별세 外</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 6:07 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/015/0005288369" target="_blank" style="color:inherit;text-decoration:none">[인사] 문화체육관광부 ; 고용노동부 ; 기상청 등</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 6:06 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/015/0005288365" target="_blank" style="color:inherit;text-decoration:none">[포토] 벤츠 S클래스 부분변경 사전 계약</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 6:02 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-015">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('057')" class="press-row">
@@ -358,31 +166,10 @@
         </tr>
         <tr id="detail-057" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/057/0001949639" target="_blank" style="color:inherit;text-decoration:none">후보에게 듣는다 5문 5답…박완수 국민의힘 경남도지사 후보</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 1:26 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/057/0001949428" target="_blank" style="color:inherit;text-decoration:none">후보에게 듣는다 5문 5답…민형배 더불어민주당 전남광주시장 후보</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.16. 오후 5:54 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/057/0001949426" target="_blank" style="color:inherit;text-decoration:none">"서울이 부러워하는 도시 만들겠다"…신동화 더불어민주당 구리시장 후보 [토요와이드]</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.16. 오후 5:53 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/057/0001949659" target="_blank" style="color:inherit;text-decoration:none">김종철 위원장, 광주‧전라 지역방송사 대표자 의견 청취</a></div>
-          <div class="vio-meta">기자: 오지예 &nbsp;|&nbsp; 2026.05.18. 오후 5:17 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">E.선정성 1.0점</span></div>
-          <div class="vio-text">[E.선정성] 김종철 위원장, 광주‧전라 지역방송사 대표자 의견 청취</div>
-        </li></ul>
+            <div id="vdetail-057">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('448')" class="press-row">
@@ -393,25 +180,10 @@
         </tr>
         <tr id="detail-448" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/448/0000612329" target="_blank" style="color:inherit;text-decoration:none">향후 10년 일자리…의사·세무사 '증가', 통역가·비서 '감소'</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:26 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/448/0000612328" target="_blank" style="color:inherit;text-decoration:none">내일 더운 날씨 지속…구름 많다 밤부터 흐려져</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:26 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/448/0000612389" target="_blank" style="color:inherit;text-decoration:none">서범수, 정원오 주폭 논란 직격…"경찰 수사가 잘못됐다는 건가" [현장영상]</a></div>
-          <div class="vio-meta">기자: 디지털뉴스부 &nbsp;|&nbsp; 2026.05.18. 오후 2:29 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] 디지털뉴스부</div>
-        </li></ul>
+            <div id="vdetail-448">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('087')" class="press-row">
@@ -422,25 +194,10 @@
         </tr>
         <tr id="detail-087" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/087/0001193813" target="_blank" style="color:inherit;text-decoration:none">［포토뉴스］홍천소방서 시민안전협의회 물품 기탁식</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:19 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/087/0001193858" target="_blank" style="color:inherit;text-decoration:none">［포토뉴스］홍천군청소년수련관 ‘청기올려’ 참여</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 2:41 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/087/0001193455" target="_blank" style="color:inherit;text-decoration:none">[포토뉴스] 화천군 청소년 해외 배낭연수 간담회</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.16. 오후 4:17 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-087">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('009')" class="press-row">
@@ -451,19 +208,10 @@
         </tr>
         <tr id="detail-009" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/009/0005681753" target="_blank" style="color:inherit;text-decoration:none">아이디</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:46 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/009/0005681752" target="_blank" style="color:inherit;text-decoration:none">[표] 오늘의 날씨</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 5:46 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-009">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('640')" class="press-row">
@@ -474,19 +222,10 @@
         </tr>
         <tr id="detail-640" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088553" target="_blank" style="color:inherit;text-decoration:none">Seoul apartment market faces triple instability (KOR)</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:45 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li>
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088552" target="_blank" style="color:inherit;text-decoration:none">Samsung strike would lead to damaging fallout (KOR)</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:44 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-640">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('092')" class="press-row">
@@ -497,13 +236,10 @@
         </tr>
         <tr id="detail-092" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/092/0002423151" target="_blank" style="color:inherit;text-decoration:none">11번가-식품진흥원, '푸드폴리스마켓 특별관' 마련</a></div>
-          <div class="vio-meta">기자: 박서린 &nbsp;|&nbsp; 2026.05.18. 오전 11:00 &nbsp;|&nbsp; 감점: 1.5점</div>
-          <div><span class="vio-tag">Q.유가기사 1.5점</span></div>
-          <div class="vio-text">[Q.유가기사 전송] …을 기념해 '5% 할인쿠폰(최대 5000원)'을 발급한다. 또한 ▲긴급공수 ▲쇼킹딜 ▲60분러시 ▲상생마켓 특가딜 등 다양한 쇼핑 코너를 통해 참여 기업 상품 노출을 강화하고 판매 활성화를 지원할 계획이다.</div><div class="vio-text">앞서 지난…</div>
-        </li></ul>
+            <div id="vdetail-092">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('025')" class="press-row">
@@ -514,13 +250,10 @@
         </tr>
         <tr id="detail-025" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/025/0003523692" target="_blank" style="color:inherit;text-decoration:none">화이트데이에 엄마 죽인 19세…형사들 경악한 아빠의 한마디</a></div>
-          <div class="vio-meta">기자: 박원식(thejoongangplus &nbsp;|&nbsp; 2026.05.16. 오후 3:00 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">E.선정성 1.0점</span></div>
-          <div class="vio-text">[E.선정성] 화이트데이에 엄마 죽인 19세…형사들 경악한 아빠의 한마디</div>
-        </li></ul>
+            <div id="vdetail-025">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('353')" class="press-row">
@@ -531,13 +264,10 @@
         </tr>
         <tr id="detail-353" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/353/0000055464" target="_blank" style="color:inherit;text-decoration:none">[사진] 1972년 vs 2026년…달라진 중국 위상</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.16. 오전 1:39 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-353">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('023')" class="press-row">
@@ -548,13 +278,10 @@
         </tr>
         <tr id="detail-023" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/023/0003977084" target="_blank" style="color:inherit;text-decoration:none">화성서 외국인 노동자 항문에 ‘에어건’ 쏜 사장, 결국 재판행</a></div>
-          <div class="vio-meta">기자: 김수언 &nbsp;|&nbsp; 2026.05.18. 오후 5:10 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">E.선정성 1.0점</span></div>
-          <div class="vio-text">[E.선정성] 화성서 외국인 노동자 항문에 ‘에어건’ 쏜 사장, 결국 재판행</div>
-        </li></ul>
+            <div id="vdetail-023">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('021')" class="press-row">
@@ -565,13 +292,10 @@
         </tr>
         <tr id="detail-021" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/021/0002791895" target="_blank" style="color:inherit;text-decoration:none">[날씨이야기] 5월19일 화요일(음력 4월3일)</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 11:43 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-021">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('437')" class="press-row">
@@ -582,13 +306,10 @@
         </tr>
         <tr id="detail-437" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/437/0000491879" target="_blank" style="color:inherit;text-decoration:none">김종철 위원장, '광주·전라' 지역방송 간담회…"지속가능 발전 기반 마련"</a></div>
-          <div class="vio-meta">기자: 노진호 &nbsp;|&nbsp; 2026.05.18. 오후 5:37 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">E.선정성 1.0점</span></div>
-          <div class="vio-text">[E.선정성] 김종철 위원장, '광주·전라' 지역방송 간담회…"지속가능 발전 기반 마련"</div>
-        </li></ul>
+            <div id="vdetail-437">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('029')" class="press-row">
@@ -599,13 +320,10 @@
         </tr>
         <tr id="detail-029" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/029/0003027280" target="_blank" style="color:inherit;text-decoration:none">[사설] 대통령의 ‘경영권 존중’ 메시지… 노동정책 균형 잡는 계기 돼야</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 6:12 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-029">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('656')" class="press-row">
@@ -616,13 +334,10 @@
         </tr>
         <tr id="detail-656" class="detail-row" style="display:none">
           <td colspan="4">
-            <ul class="vio-list">
-        <li class="vio-item">
-          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/656/0000176645" target="_blank" style="color:inherit;text-decoration:none">[간호사칼럼] 봄과 함께 온 돌봄</a></div>
-          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오후 6:14 &nbsp;|&nbsp; 감점: 1.0점</div>
-          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
-          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
-        </li></ul>
+            <div id="vdetail-656">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('007')" class="press-row">
@@ -633,7 +348,10 @@
         </tr>
         <tr id="detail-007" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-007">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('607')" class="press-row">
@@ -644,7 +362,10 @@
         </tr>
         <tr id="detail-607" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-607">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('006')" class="press-row">
@@ -655,7 +376,10 @@
         </tr>
         <tr id="detail-006" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-006">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('293')" class="press-row">
@@ -666,7 +390,10 @@
         </tr>
         <tr id="detail-293" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-293">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('262')" class="press-row">
@@ -677,7 +404,10 @@
         </tr>
         <tr id="detail-262" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-262">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('037')" class="press-row">
@@ -688,7 +418,10 @@
         </tr>
         <tr id="detail-037" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-037">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('044')" class="press-row">
@@ -699,7 +432,10 @@
         </tr>
         <tr id="detail-044" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-044">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('138')" class="press-row">
@@ -710,7 +446,10 @@
         </tr>
         <tr id="detail-138" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-138">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('586')" class="press-row">
@@ -721,7 +460,10 @@
         </tr>
         <tr id="detail-586" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-586">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('648')" class="press-row">
@@ -732,7 +474,10 @@
         </tr>
         <tr id="detail-648" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-648">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('002')" class="press-row">
@@ -743,7 +488,10 @@
         </tr>
         <tr id="detail-002" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-002">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('094')" class="press-row">
@@ -754,7 +502,10 @@
         </tr>
         <tr id="detail-094" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-094">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('036')" class="press-row">
@@ -765,7 +516,10 @@
         </tr>
         <tr id="detail-036" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-036">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('661')" class="press-row">
@@ -776,7 +530,10 @@
         </tr>
         <tr id="detail-661" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-661">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('032')" class="press-row">
@@ -787,7 +544,10 @@
         </tr>
         <tr id="detail-032" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-032">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('011')" class="press-row">
@@ -798,7 +558,10 @@
         </tr>
         <tr id="detail-011" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-011">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('018')" class="press-row">
@@ -809,7 +572,10 @@
         </tr>
         <tr id="detail-018" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-018">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('119')" class="press-row">
@@ -820,7 +586,10 @@
         </tr>
         <tr id="detail-119" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-119">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('031')" class="press-row">
@@ -831,7 +600,10 @@
         </tr>
         <tr id="detail-031" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-031">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('047')" class="press-row">
@@ -842,7 +614,10 @@
         </tr>
         <tr id="detail-047" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-047">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('665')" class="press-row">
@@ -853,7 +628,10 @@
         </tr>
         <tr id="detail-665" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-665">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('145')" class="press-row">
@@ -864,7 +642,10 @@
         </tr>
         <tr id="detail-145" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-145">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('033')" class="press-row">
@@ -875,7 +656,10 @@
         </tr>
         <tr id="detail-033" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-033">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('127')" class="press-row">
@@ -886,7 +670,10 @@
         </tr>
         <tr id="detail-127" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-127">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('662')" class="press-row">
@@ -897,7 +684,10 @@
         </tr>
         <tr id="detail-662" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-662">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('308')" class="press-row">
@@ -908,7 +698,10 @@
         </tr>
         <tr id="detail-308" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-308">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('584')" class="press-row">
@@ -919,7 +712,10 @@
         </tr>
         <tr id="detail-584" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-584">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('296')" class="press-row">
@@ -930,7 +726,10 @@
         </tr>
         <tr id="detail-296" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-296">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('028')" class="press-row">
@@ -941,7 +740,10 @@
         </tr>
         <tr id="detail-028" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-028">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('052')" class="press-row">
@@ -952,7 +754,10 @@
         </tr>
         <tr id="detail-052" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-052">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('053')" class="press-row">
@@ -963,7 +768,10 @@
         </tr>
         <tr id="detail-053" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-053">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('346')" class="press-row">
@@ -974,7 +782,10 @@
         </tr>
         <tr id="detail-346" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-346">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('081')" class="press-row">
@@ -985,7 +796,10 @@
         </tr>
         <tr id="detail-081" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-081">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('001')" class="press-row">
@@ -996,7 +810,10 @@
         </tr>
         <tr id="detail-001" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-001">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('008')" class="press-row">
@@ -1007,7 +824,10 @@
         </tr>
         <tr id="detail-008" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-008">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('277')" class="press-row">
@@ -1018,7 +838,10 @@
         </tr>
         <tr id="detail-277" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-277">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('123')" class="press-row">
@@ -1029,7 +852,10 @@
         </tr>
         <tr id="detail-123" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-123">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('014')" class="press-row">
@@ -1040,7 +866,10 @@
         </tr>
         <tr id="detail-014" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-014">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('016')" class="press-row">
@@ -1051,7 +880,10 @@
         </tr>
         <tr id="detail-016" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-016">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('024')" class="press-row">
@@ -1062,7 +894,10 @@
         </tr>
         <tr id="detail-024" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-024">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('243')" class="press-row">
@@ -1073,7 +908,10 @@
         </tr>
         <tr id="detail-243" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-243">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('660')" class="press-row">
@@ -1084,7 +922,10 @@
         </tr>
         <tr id="detail-660" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-660">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('666')" class="press-row">
@@ -1095,7 +936,10 @@
         </tr>
         <tr id="detail-666" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-666">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('088')" class="press-row">
@@ -1106,7 +950,10 @@
         </tr>
         <tr id="detail-088" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-088">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('082')" class="press-row">
@@ -1117,7 +964,10 @@
         </tr>
         <tr id="detail-082" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-082">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('659')" class="press-row">
@@ -1128,7 +978,10 @@
         </tr>
         <tr id="detail-659" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-659">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('020')" class="press-row">
@@ -1139,7 +992,10 @@
         </tr>
         <tr id="detail-020" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-020">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('417')" class="press-row">
@@ -1150,7 +1006,10 @@
         </tr>
         <tr id="detail-417" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-417">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('050')" class="press-row">
@@ -1161,7 +1020,10 @@
         </tr>
         <tr id="detail-050" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-050">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('310')" class="press-row">
@@ -1172,7 +1034,10 @@
         </tr>
         <tr id="detail-310" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-310">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('657')" class="press-row">
@@ -1183,7 +1048,10 @@
         </tr>
         <tr id="detail-657" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-657">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('055')" class="press-row">
@@ -1194,7 +1062,10 @@
         </tr>
         <tr id="detail-055" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-055">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('215')" class="press-row">
@@ -1205,7 +1076,10 @@
         </tr>
         <tr id="detail-215" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-215">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('005')" class="press-row">
@@ -1216,7 +1090,10 @@
         </tr>
         <tr id="detail-005" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-005">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('022')" class="press-row">
@@ -1227,7 +1104,10 @@
         </tr>
         <tr id="detail-022" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-022">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('469')" class="press-row">
@@ -1238,7 +1118,10 @@
         </tr>
         <tr id="detail-469" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-469">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('056')" class="press-row">
@@ -1249,7 +1132,10 @@
         </tr>
         <tr id="detail-056" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-056">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('214')" class="press-row">
@@ -1260,7 +1146,10 @@
         </tr>
         <tr id="detail-214" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-214">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('374')" class="press-row">
@@ -1271,7 +1160,10 @@
         </tr>
         <tr id="detail-374" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-374">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('421')" class="press-row">
@@ -1282,7 +1174,10 @@
         </tr>
         <tr id="detail-421" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-421">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('422')" class="press-row">
@@ -1293,7 +1188,10 @@
         </tr>
         <tr id="detail-422" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-422">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('366')" class="press-row">
@@ -1304,7 +1202,10 @@
         </tr>
         <tr id="detail-366" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-366">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('079')" class="press-row">
@@ -1315,7 +1216,10 @@
         </tr>
         <tr id="detail-079" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-079">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('629')" class="press-row">
@@ -1326,7 +1230,10 @@
         </tr>
         <tr id="detail-629" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-629">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('655')" class="press-row">
@@ -1337,7 +1244,10 @@
         </tr>
         <tr id="detail-655" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-655">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('654')" class="press-row">
@@ -1348,7 +1258,10 @@
         </tr>
         <tr id="detail-654" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-654">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
         <tr onclick="toggleDetail('658')" class="press-row">
@@ -1359,7 +1272,10 @@
         </tr>
         <tr id="detail-658" class="detail-row" style="display:none">
           <td colspan="4">
-            <p class="no-vio">위반 의심 기사 없음</p>
+            <div id="vdetail-658">
+              <div class="vio-container"></div>
+              <div class="pager"></div>
+            </div>
           </td>
         </tr>
     </tbody>
@@ -1367,9 +1283,79 @@
 </div>
 <footer>네이버 뉴스 제휴 심사 및 운영 평가 규정 (2026.02.11) 기준 &nbsp;|&nbsp; 해지 기준: 24개월 누적 10점 이상</footer>
 <script>
+const VDATA = {"092": [{"title": "11번가-식품진흥원, '푸드폴리스마켓 특별관' 마련", "byline": "박서린", "date": "2026.05.18. 오전 11:00", "score": 1.5, "tags": ["Q.유가기사 1.5점"], "vioText": ["[Q.유가기사 전송] …을 기념해 '5% 할인쿠폰(최대 5000원)'을 발급한다. 또한 ▲긴급공수 ▲쇼킹딜 ▲60분러시 ▲상생마켓 특가딜 등 다양한 쇼핑 코너를 통해 참여 기업 상품 노출을 강화하고 판매 활성화를 지원할 계획이다.", "앞서 지난…"], "url": "https://n.news.naver.com/mnews/article/092/0002423151"}], "030": [{"title": "롯데온, '엘타운 슈퍼위크' 진행…여름 상품 특가 강화", "byline": "윤희석 pioneer", "date": "2026.05.18. 오후 2:46", "score": 1.5, "tags": ["Q.유가기사 1.5점"], "vioText": ["[Q.유가기사 전송] …지 일주일간 엘타운 슈퍼위크를 연다고 18일 밝혔다. 여름 시즌 수요를 겨냥한 숙박·식품·리빙 상품 중심의 할인 혜택을 선보인다.", "대표 상품은 7~8월 극성수기 예약이 가능한 롯데호텔앤리조트의 '롯데호텔 제주 패키지'다…"], "url": "https://n.news.naver.com/mnews/article/030/0003428718"}, {"title": "[부음] 김세인(대한축구협회 여자축구팀장)씨 시부상", "byline": "(없음)", "date": "2026.05.18. 오후 5:33", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/030/0003428826"}, {"title": "[부음] 김민규(춘천시육상연맹회장)씨 장모상", "byline": "(없음)", "date": "2026.05.18. 오후 5:33", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/030/0003428825"}, {"title": "[부음] 최병호(법무법인 태평양 변호사)씨 모친상", "byline": "(없음)", "date": "2026.05.18. 오후 5:32", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/030/0003428824"}, {"title": "[부음] 이로물로(평화방송 미디어본부장)씨 장모상", "byline": "(없음)", "date": "2026.05.18. 오후 5:32", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/030/0003428823"}], "640": [{"title": "Seoul apartment market faces triple instability (KOR)", "byline": "(없음)", "date": "2026.05.18. 오전 9:45", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/640/0000088553"}, {"title": "Samsung strike would lead to damaging fallout (KOR)", "byline": "(없음)", "date": "2026.05.18. 오전 9:44", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/640/0000088552"}], "003": [{"title": "인사하는 이재명 대통령", "byline": "(없음)", "date": "2026.05.18. 오전 11:26", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013951162"}, {"title": "이재명 대통령, 5·18민주화운동 기념식 기념사", "byline": "(없음)", "date": "2026.05.18. 오전 11:26", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013951160"}, {"title": "국민의힘, 정원오 후보 공직선거법상 허위사실공표죄 고발장 제출", "byline": "(없음)", "date": "2026.05.18. 오후 2:38", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013951811"}, {"title": "정원오 고발장 접수하는 곽규택 클린선거본부장", "byline": "(없음)", "date": "2026.05.18. 오후 2:38", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013951810"}, {"title": "국민의힘, 정원오 후보 공직선거법상 허위사실공표죄 고발장 제출", "byline": "(없음)", "date": "2026.05.18. 오후 2:38", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013951808"}, {"title": "국민의힘, 정원오 후보 공직선거법상 허위사실공표죄 고발장 제출", "byline": "(없음)", "date": "2026.05.18. 오후 2:38", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013951807"}, {"title": "국민의힘, 정원오 후보 공직선거법상 허위사실공표죄 고발장 제출", "byline": "(없음)", "date": "2026.05.18. 오후 2:38", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013951806"}, {"title": "고발장 접수 위해 서울경찰청 향하는 곽규택", "byline": "(없음)", "date": "2026.05.18. 오후 2:38", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013951805"}, {"title": "고발장 접수 위해 서울경찰청 향하는 곽규택", "byline": "(없음)", "date": "2026.05.18. 오후 2:38", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013951804"}, {"title": "남광주시장 방문한 이재명 대통령", "byline": "(없음)", "date": "2026.05.18. 오후 5:52", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013952420"}, {"title": "남광주시장 방문한 이재명 대통령", "byline": "(없음)", "date": "2026.05.18. 오후 5:52", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013952418"}, {"title": "이재명 대통령, 남광주시장 방문", "byline": "(없음)", "date": "2026.05.18. 오후 5:52", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013952417"}, {"title": "5·18민주묘지 참배하는 이재명 대통령", "byline": "(없음)", "date": "2026.05.18. 오후 5:52", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/003/0013952416"}], "353": [{"title": "[사진] 1972년 vs 2026년…달라진 중국 위상", "byline": "(없음)", "date": "2026.05.16. 오전 1:39", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/353/0000055464"}], "449": [{"title": "360km 굉음 내며 달리다…바이크 산산조각 공중부양 [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오전 11:34", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345535"}, {"title": "한동훈 본 젊은 남성 “나라를 살려주세요” [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오전 11:20", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345533"}, {"title": "바다 위 배 한 가득…이란 국영방송, 호르무즈 해협 최근 영상 공개 [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오전 11:07", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345530"}, {"title": "레이저로 ‘쾅’ 트럼프, 이란 군용기 격추 AI 영상 무더기로 올린 트럼프…이란에 “시간 얼마 없다” 압박도 [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오전 11:03", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345529"}, {"title": "“손가락질 하지마!!”…정원오 ‘폭행’ 논란에 고성·손가락질 [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오후 2:46", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345563"}, {"title": "화장실도 안 가는 로봇?…인간과 100시간 째 택배 분류 대결 중 [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오후 2:43", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345562"}, {"title": "MC몽, 긴급 방송 폭로 예고 “불법도박 연예인 폭로할 것” [자막뉴스]", "byline": "(없음)", "date": "2026.05.18. 오후 2:21", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345561"}, {"title": "“호르무즈 해협 봉쇄 계속” 강습상륙함·전투기 총동원하며 이란 최대 압박하는 美 [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오후 2:12", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345558"}, {"title": "칸에 간 나홍진 ‘호프’…뜨거운 현지반응에 수상 기대감 ↑ [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오후 1:52", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345556"}, {"title": "[날씨]오늘도 8월 더위…강한 자외선 유의", "byline": "(없음)", "date": "2026.05.18. 오후 1:38", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345554"}, {"title": "조국 “당선되면 민주진보 진영 연대·통합을 주도적으로 하겠다” [현장영상]", "byline": "(없음)", "date": "2026.05.16. 오후 6:27", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345416"}, {"title": "“무소속이면 안 X팔려요?”…한동훈에 돌직구 초등학생 [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오후 5:03", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345583"}, {"title": "‘칼든 뺑소니범’ 추격해 맨손으로 검거…용감한 시민들 [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오후 4:50", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345582"}, {"title": "이란 여성들도 총 잡았다? 앵커부터 주부까지 “목숨 바칠 것”…대미 항전 의지 불태워 [현장영상]", "byline": "(없음)", "date": "2026.05.18. 오후 4:40", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/449/0000345581"}], "021": [{"title": "[날씨이야기] 5월19일 화요일(음력 4월3일)", "byline": "(없음)", "date": "2026.05.18. 오전 11:43", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/021/0002791895"}], "448": [{"title": "향후 10년 일자리…의사·세무사 '증가', 통역가·비서 '감소'", "byline": "(없음)", "date": "2026.05.18. 오전 11:26", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/448/0000612329"}, {"title": "내일 더운 날씨 지속…구름 많다 밤부터 흐려져", "byline": "(없음)", "date": "2026.05.18. 오전 11:26", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/448/0000612328"}, {"title": "서범수, 정원오 주폭 논란 직격…\"경찰 수사가 잘못됐다는 건가\" [현장영상]", "byline": "디지털뉴스부", "date": "2026.05.18. 오후 2:29", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] 디지털뉴스부"], "url": "https://n.news.naver.com/mnews/article/448/0000612389"}], "087": [{"title": "［포토뉴스］홍천소방서 시민안전협의회 물품 기탁식", "byline": "(없음)", "date": "2026.05.18. 오전 11:19", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/087/0001193813"}, {"title": "［포토뉴스］홍천군청소년수련관 ‘청기올려’ 참여", "byline": "(없음)", "date": "2026.05.18. 오후 2:41", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/087/0001193858"}, {"title": "[포토뉴스] 화천군 청소년 해외 배낭연수 간담회", "byline": "(없음)", "date": "2026.05.16. 오후 4:17", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/087/0001193455"}], "057": [{"title": "후보에게 듣는다 5문 5답…박완수 국민의힘 경남도지사 후보", "byline": "(없음)", "date": "2026.05.18. 오후 1:26", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/057/0001949639"}, {"title": "후보에게 듣는다 5문 5답…민형배 더불어민주당 전남광주시장 후보", "byline": "(없음)", "date": "2026.05.16. 오후 5:54", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/057/0001949428"}, {"title": "\"서울이 부러워하는 도시 만들겠다\"…신동화 더불어민주당 구리시장 후보 [토요와이드]", "byline": "(없음)", "date": "2026.05.16. 오후 5:53", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/057/0001949426"}, {"title": "김종철 위원장, 광주‧전라 지역방송사 대표자 의견 청취", "byline": "오지예", "date": "2026.05.18. 오후 5:17", "score": 1.0, "tags": ["E.선정성 1.0점"], "vioText": ["[E.선정성] 김종철 위원장, 광주‧전라 지역방송사 대표자 의견 청취"], "url": "https://n.news.naver.com/mnews/article/057/0001949659"}], "025": [{"title": "화이트데이에 엄마 죽인 19세…형사들 경악한 아빠의 한마디", "byline": "박원식(thejoongangplus", "date": "2026.05.16. 오후 3:00", "score": 1.0, "tags": ["E.선정성 1.0점"], "vioText": ["[E.선정성] 화이트데이에 엄마 죽인 19세…형사들 경악한 아빠의 한마디"], "url": "https://n.news.naver.com/mnews/article/025/0003523692"}], "009": [{"title": "아이디", "byline": "(없음)", "date": "2026.05.18. 오후 5:46", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/009/0005681753"}, {"title": "[표] 오늘의 날씨", "byline": "(없음)", "date": "2026.05.18. 오후 5:46", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/009/0005681752"}], "023": [{"title": "화성서 외국인 노동자 항문에 ‘에어건’ 쏜 사장, 결국 재판행", "byline": "김수언", "date": "2026.05.18. 오후 5:10", "score": 1.0, "tags": ["E.선정성 1.0점"], "vioText": ["[E.선정성] 화성서 외국인 노동자 항문에 ‘에어건’ 쏜 사장, 결국 재판행"], "url": "https://n.news.naver.com/mnews/article/023/0003977084"}], "015": [{"title": "품질경영학회, 대한상의서 학술대회", "byline": "(없음)", "date": "2026.05.18. 오후 6:08", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/015/0005288373"}, {"title": "[부고] 윤복순씨 별세 外", "byline": "(없음)", "date": "2026.05.18. 오후 6:07", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/015/0005288372"}, {"title": "[인사] 문화체육관광부 ; 고용노동부 ; 기상청 등", "byline": "(없음)", "date": "2026.05.18. 오후 6:06", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/015/0005288369"}, {"title": "[포토] 벤츠 S클래스 부분변경 사전 계약", "byline": "(없음)", "date": "2026.05.18. 오후 6:02", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/015/0005288365"}], "437": [{"title": "김종철 위원장, '광주·전라' 지역방송 간담회…\"지속가능 발전 기반 마련\"", "byline": "노진호", "date": "2026.05.18. 오후 5:37", "score": 1.0, "tags": ["E.선정성 1.0점"], "vioText": ["[E.선정성] 김종철 위원장, '광주·전라' 지역방송 간담회…\"지속가능 발전 기반 마련\""], "url": "https://n.news.naver.com/mnews/article/437/0000491879"}], "029": [{"title": "[사설] 대통령의 ‘경영권 존중’ 메시지… 노동정책 균형 잡는 계기 돼야", "byline": "(없음)", "date": "2026.05.18. 오후 6:12", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/029/0003027280"}], "656": [{"title": "[간호사칼럼] 봄과 함께 온 돌봄", "byline": "(없음)", "date": "2026.05.18. 오후 6:14", "score": 1.0, "tags": ["C.바이라인 없음 1.0점"], "vioText": ["[C.바이라인 없음] (바이라인 없음)"], "url": "https://n.news.naver.com/mnews/article/656/0000176645"}]};
+const PAGE_SIZE = 10;
+const curPage = {};
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function toggleDetail(code) {
-  const el = document.getElementById('detail-' + code);
-  el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+  const row = document.getElementById('detail-' + code);
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  if (!open) renderPage(code, curPage[code] || 1);
+}
+
+function renderPage(code, page) {
+  curPage[code] = page;
+  const arts = VDATA[code] || [];
+  const total = arts.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  page = Math.min(Math.max(1, page), totalPages);
+
+  const wrap    = document.getElementById('vdetail-' + code);
+  const ctr     = wrap.querySelector('.vio-container');
+  const pagerEl = wrap.querySelector('.pager');
+
+  if (total === 0) {
+    ctr.innerHTML = '<p class="no-vio">위반 의심 기사 없음</p>';
+    pagerEl.innerHTML = '';
+    return;
+  }
+
+  const slice = arts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  ctr.innerHTML =
+    `<div class="page-info">${page}/${totalPages} 페이지 &nbsp;(총 ${total}건)</div>` +
+    slice.map(a => {
+      const tags    = a.tags.map(t => `<span class="vio-tag">${esc(t)}</span>`).join('');
+      const viLines = a.vioText.map(l => `<div class="vio-text">${esc(l)}</div>`).join('');
+      return `<div class="vio-item">
+        <div class="vio-title"><a href="${esc(a.url)}" target="_blank" style="color:inherit;text-decoration:none">${esc(a.title)}</a></div>
+        <div class="vio-meta">기자: ${esc(a.byline)} &nbsp;|&nbsp; ${esc(a.date)} &nbsp;|&nbsp; 감점: ${a.score.toFixed(1)}점</div>
+        <div>${tags}</div>${viLines}
+      </div>`;
+    }).join('');
+
+  pagerEl.innerHTML = totalPages <= 1 ? '' : buildPager(code, page, totalPages);
+}
+
+function buildPager(code, cur, total) {
+  const btn = (p, label, disabled, active) =>
+    `<button onclick="renderPage('${code}',${p})"
+             ${disabled ? 'disabled' : ''}
+             class="${active ? 'active' : ''}">${label}</button>`;
+
+  let html = btn(cur - 1, '‹ 이전', cur === 1, false);
+
+  // 슬라이딩 윈도우: 현재 ±2, 항상 첫·끝 페이지, 중간은 … 생략
+  const pages = new Set([1, total]);
+  for (let p = Math.max(1, cur - 2); p <= Math.min(total, cur + 2); p++) pages.add(p);
+  const sorted = Array.from(pages).sort((a,b)=>a-b);
+
+  let prev = 0;
+  for (const p of sorted) {
+    if (prev && p - prev > 1) html += '<span class="pager-ellipsis">…</span>';
+    html += btn(p, p, false, p === cur);
+    prev = p;
+  }
+
+  html += btn(cur + 1, '다음 ›', cur === total, false);
+  return html;
 }
 </script>
 </body>
