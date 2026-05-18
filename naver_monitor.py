@@ -207,7 +207,10 @@ R_NEWS_CONTEXT = [
 # "충분하지 않는 정보나 단어를 이용하여 이용자 오해를 유발" — 정보 은폐형 표현
 # 경악·발칵 등 충격 표현은 E항(성적·폭력적 호기심 자극)으로 분류
 CLICKBAIT_PATTERNS = [
-    (r"알고\s*보니",           "알고보니 패턴"),
+    # "알고보니"가 제목 끝이거나 뒤에 모호한 감정어만 있을 때 = 정보 은폐형
+    # "알고보니 포항시장 예비 후보" 처럼 구체적 사실이 따라오면 제외
+    (r"알고\s*보니\s*(충격|반전|대박|경악|황당|소름|놀라움|사실|이유)?\s*[!?…]*\s*$",
+     "알고보니(정보은폐)"),
     (r"뒤늦게\s*(밝혀|알려)",  "뒤늦게 반전"),
     (r"사실은\s*이랬다",       "사실은이랬다 패턴"),
     (r"(?:반전|놀라운)\s*근황", "반전 근황"),
@@ -223,9 +226,11 @@ SENSATIONAL_TITLE_WORDS = [
 # "음모"는 '음모론/음모자/음모설' 등 정치·사회 용어와 구별 필요 → 별도 패턴으로 처리
 _EUMMO_RE = re.compile(r"음모(?!론|자|설|론자)")  # 음모론·음모자·음모설 제외
 SENSATIONAL_TITLE_PATTERNS = [
-    (r"경악",                                    "경악 표현"),
-    (r"발칵",                                    "발칵 표현"),
-    (r"충격\s*(반전|폭로|고백|공개|근황|데뷔|은퇴)", "충격+강조어 조합"),
+    (r"경악",                                          "경악 표현"),
+    # "발칵": 정책·재정·사회 뉴스의 공분 표현과 구별 → 인물·사생활·연예 맥락과 결합 시만 탐지
+    (r"발칵.{0,15}(열애|사생활|불륜|스캔들|폭로|충격|사망|자살|은퇴|탈퇴|임신|결혼|이혼)", "발칵+선정맥락"),
+    (r"(열애|사생활|불륜|스캔들|폭로|충격|사망|자살|은퇴|탈퇴|임신|결혼|이혼).{0,15}발칵", "선정맥락+발칵"),
+    (r"충격\s*(반전|폭로|고백|공개|근황|데뷔|은퇴)",   "충격+강조어 조합"),
 ]
 
 # C. 바이라인: 부서명/팀명만 기재 → 1점 (개인 기자명 부재)
@@ -292,8 +297,9 @@ L_STOPWORDS = {
     "there", "then", "here", "these", "those", "such", "just", "even",
     "like", "after", "before", "while", "since", "if", "so", "up", "or",
     "am", "do", "go", "no", "yet", "too", "very", "each", "both", "few",
-    # 단위 약어 (키·거리·무게 등 반복 표기는 키워드 남용 아님)
-    "cm", "mm", "km", "mg", "kg", "ml", "kcal", "km", "GHz", "MHz",
+    # 단위 약어 (키·거리·무게·금액 등 반복 표기는 키워드 남용 아님)
+    "cm", "mm", "km", "mg", "kg", "ml", "kcal", "GHz", "MHz",
+    "만원", "억원", "조원", "만달러", "억달러",
 }
 
 
@@ -441,6 +447,13 @@ async def get_article_content(page, url: str) -> dict:
             if m:
                 byline = m.group(1)
                 break
+        # 마지막 5줄: "김동기 청담 총괄셰프 paychey@naver.com" (이름+직책+이메일)
+        if not byline:
+            for line in reversed(all_lines[-5:]):
+                m = re.match(r"^([가-힣]{2,4}[\s가-힣A-Za-z·]+?)\s+\S+@\S+$", line)
+                if m:
+                    byline = m.group(1).strip()
+                    break
         # 마지막 3줄 + 첫 3줄: 외부 기고 서명 "김만기 KAIST 교수", "[신율 명지대 교수]"
         if not byline:
             EXPERT_TITLE = re.compile(
@@ -542,9 +555,9 @@ def analyze_rules(article: dict) -> dict:
     t_words       = [w for w in re.findall(r"[가-힣a-zA-Z]{2,}", title) if w.lower() not in L_STOPWORDS]
     title_wordset = set(t_words)
     lead_wordset  = set(re.findall(r"[가-힣a-zA-Z]{2,}", body[:BODY_LEAD_CHARS]))
-    # 본문 전체 최다 등장 상위 5단어도 주제어로 추가 (제목·리드에 없어도 핵심 주제 인식)
+    # 본문 전체 최다 등장 상위 10단어도 주제어로 추가 (제목·리드에 없어도 핵심 주제 인식)
     _body_freq = Counter(w for w in re.findall(r"[가-힣a-zA-Z]{2,}", body) if w.lower() not in L_STOPWORDS)
-    lead_wordset |= {w for w, _ in _body_freq.most_common(5)}
+    lead_wordset |= {w for w, _ in _body_freq.most_common(10)}
     # 양방향 prefix 매칭으로 조사 결합 처리
     # 정방향: 본문단어가 토픽단어+조사 (교사 → 교사는)
     # 역방향: 본문단어가 토픽단어의 어근 (검찰 ⊂ 검찰이/검찰에)

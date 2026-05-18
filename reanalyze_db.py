@@ -46,6 +46,13 @@ def reanalyze_from_body(conn: sqlite3.Connection) -> tuple[int, int]:
                 if m:
                     byline = m.group(1)
                     break
+            # 마지막 5줄: "김동기 청담 총괄셰프 paychey@naver.com" (이름+직책+이메일)
+            if not byline:
+                for line in reversed(all_lines[-5:]):
+                    m = re.match(r"^([가-힣]{2,4}[\s가-힣A-Za-z·]+?)\s+\S+@\S+$", line)
+                    if m:
+                        byline = m.group(1).strip()
+                        break
             # 마지막 3줄 + 첫 3줄: 외부 기고 서명 "김만기 KAIST 교수", "[신율 명지대 교수]"
             if not byline:
                 _expert_re = re.compile(r"^\[?[가-힣]{2,4}[\s·]")
