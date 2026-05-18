@@ -5,6 +5,7 @@
 
 import asyncio
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -12,6 +13,14 @@ import io
 from collections import Counter, defaultdict
 from datetime import datetime, date, timedelta
 from playwright.async_api import async_playwright
+
+try:
+    import requests as _requests
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv()
+    _DATALAB_AVAILABLE = True
+except ImportError:
+    _DATALAB_AVAILABLE = False
 
 def _setup_utf8_stdout():
     """Windows 터미널 UTF-8 출력 강제 (line_buffering=True: 줄 단위 즉시 flush)"""
@@ -266,6 +275,87 @@ L_STOPWORDS = {
 }
 
 
+# ── 네이버 DataLab 트렌드 검증 (L항) ────────────────────────────────────────
+TREND_CACHE_FILE  = "naver_trend_cache.json"
+TREND_THRESHOLD   = 1.0   # DataLab ratio 이 이상이면 실제 인기 검색어로 판단
+
+_trend_cache: dict = {}   # {keyword: {"ratio": float, "date": "YYYY-MM-DD"}}
+
+
+def _load_trend_cache() -> None:
+    global _trend_cache
+    if _trend_cache:
+        return
+    try:
+        with open(TREND_CACHE_FILE, encoding="utf-8") as f:
+            _trend_cache = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        _trend_cache = {}
+
+
+def _save_trend_cache() -> None:
+    with open(TREND_CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(_trend_cache, f, ensure_ascii=False)
+
+
+def fetch_keyword_trends(keywords: list) -> dict:
+    """
+    키워드 목록의 DataLab 트렌드 ratio를 반환. {keyword: max_ratio}
+    API 미사용 가능 시 또는 오류 시 빈 dict 반환.
+    캐시: 당일 조회 결과를 TREND_CACHE_FILE에 저장.
+    """
+    if not _DATALAB_AVAILABLE or not keywords:
+        return {}
+
+    client_id     = os.getenv("NAVER_CLIENT_ID")
+    client_secret = os.getenv("NAVER_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        return {}
+
+    _load_trend_cache()
+    today     = date.today().isoformat()
+    to_fetch  = [kw for kw in keywords if _trend_cache.get(kw, {}).get("date") != today]
+
+    # API: 최대 5개 keywordGroups per request
+    BATCH = 5
+    end_date   = today
+    start_date = (date.today() - timedelta(days=6)).isoformat()  # 최근 7일
+    headers = {
+        "X-Naver-Client-Id":     client_id,
+        "X-Naver-Client-Secret": client_secret,
+        "Content-Type":          "application/json",
+    }
+
+    for i in range(0, len(to_fetch), BATCH):
+        batch = to_fetch[i:i + BATCH]
+        body  = {
+            "startDate":    start_date,
+            "endDate":      end_date,
+            "timeUnit":     "date",
+            "keywordGroups": [{"groupName": kw, "keywords": [kw]} for kw in batch],
+        }
+        try:
+            r = _requests.post(
+                "https://openapi.naver.com/v1/datalab/search",
+                headers=headers,
+                json=body,
+                timeout=10,
+            )
+            if r.status_code != 200:
+                continue
+            data = r.json()
+            for result in data.get("results", []):
+                kw    = result["title"]
+                ratio = max((p["ratio"] for p in result.get("data", [])), default=0.0)
+                _trend_cache[kw] = {"ratio": ratio, "date": today}
+        except Exception:
+            pass
+
+    _save_trend_cache()
+
+    return {kw: _trend_cache[kw]["ratio"] for kw in keywords if kw in _trend_cache}
+
+
 # ── 기사 목록 수집 ───────────────────────────────────────────────────────────
 async def get_article_list(page, press_code: str, max_count: int = 30) -> list[dict]:
     url = f"https://news.naver.com/main/list.naver?mode=LPOD&mid=sec&oid={press_code}"
@@ -436,14 +526,26 @@ def analyze_rules(article: dict) -> dict:
             if len(w) >= 2 and tw.startswith(w) and len(tw) - len(w) <= 2:
                 return True
         return False
-    t_abused = [w for w, c in Counter(t_words).items() if c >= KEYWORD_REPEAT_TITLE]
-    b_abused = [] if is_photo else [
+    t_abused_raw = [w for w, c in Counter(t_words).items() if c >= KEYWORD_REPEAT_TITLE]
+    b_abused_raw = [] if is_photo else [
         w for w, c in Counter(
             w for w in re.findall(r"[가-힣a-zA-Z]{2,}", body)
             if w.lower() not in L_STOPWORDS and not is_topic_word(w)
         ).items()
         if c >= KEYWORD_REPEAT_BODY
     ][:5]
+
+    # DataLab 트렌드 검증: 반복 단어가 실제 인기 검색어일 때만 L항 적용
+    # ratio < TREND_THRESHOLD 이면 일반 주제어이므로 제외
+    all_candidates = list(set(t_abused_raw + b_abused_raw))
+    if all_candidates:
+        trends = fetch_keyword_trends(all_candidates)
+        t_abused = [w for w in t_abused_raw if trends.get(w, 0.0) >= TREND_THRESHOLD]
+        b_abused = [w for w in b_abused_raw if trends.get(w, 0.0) >= TREND_THRESHOLD]
+    else:
+        t_abused = t_abused_raw
+        b_abused = b_abused_raw
+
     l_reasons = []
     l_texts   = []
     if t_abused:
