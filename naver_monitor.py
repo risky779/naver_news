@@ -235,7 +235,7 @@ AI_DISCLOSURE_WORDS   = ["ai 활용", "ai 생성", "인공지능 활용", "[ai]"
 # L. 규정: "연속·반복적으로 과도하게" — 단순 언급과 구별하기 위해 높은 임계값 적용
 KEYWORD_REPEAT_TITLE  = 3   # 제목 내 동일 단어 3회+ (2자 이상)
 KEYWORD_REPEAT_BODY   = 20  # 본문 내 동일 단어 20회+ (2자 이상)
-BODY_LEAD_CHARS       = 400 # 본문 첫 N자 내 등장 단어 = 주제어/인명으로 간주, L항 제외
+BODY_LEAD_CHARS       = 600 # 본문 첫 N자 내 등장 단어 = 주제어/인명으로 간주, L항 제외
 
 # L항 불용어: 검색 조작 목적과 무관한 일반 서술어·조사·부사 제외
 L_STOPWORDS = {
@@ -248,13 +248,21 @@ L_STOPWORDS = {
     "모든", "이런", "이러한", "그런", "그러한", "이같은", "이같이",
     "또한", "하지만", "그러나", "그리고", "따라서", "때문", "만큼",
     "경우", "상황", "문제", "내용", "방법", "방식", "계획", "예정",
-    # 영어 불용어 (영문 기사 대응)
+    # 영어 불용어 (영문 기사 대응 — 소문자로만 등록, 체크 시 .lower() 적용)
     "the", "and", "that", "this", "with", "for", "are", "was", "were",
     "has", "have", "had", "not", "but", "from", "they", "will", "been",
     "its", "his", "her", "our", "their", "said", "also", "which", "who",
     "more", "than", "into", "when", "about", "would", "could", "should",
     "can", "may", "all", "one", "two", "new", "out", "any", "some",
     "an", "in", "on", "at", "by", "of", "to", "is", "it", "be", "as",
+    # 대명사·접속사 (영문 기고문에서 자주 반복)
+    "we", "me", "you", "she", "he", "us", "my", "your", "them", "her",
+    "do", "did", "does", "been", "were", "what", "how", "why", "where",
+    "there", "then", "here", "these", "those", "such", "just", "even",
+    "like", "after", "before", "while", "since", "if", "so", "up", "or",
+    "am", "do", "go", "no", "yet", "too", "very", "each", "both", "few",
+    # 단위 약어 (키·거리·무게 등 반복 표기는 키워드 남용 아님)
+    "cm", "mm", "km", "mg", "kg", "ml", "kcal", "km", "GHz", "MHz",
 }
 
 
@@ -324,10 +332,10 @@ async def get_article_content(page, url: str) -> dict:
         # 마지막 3줄: 외부 기고 서명 "김만기 KAIST 미래전략대학원 교수"
         if not byline:
             EXPERT_TITLE = re.compile(
-                r"(교수|원장|소장|대표|위원장|이사장|이사|연구원|연구위원|센터장|회장|처장|박사|전문위원|논설위원|칼럼니스트)$"
+                r"교수|원장|소장|대표|위원장|이사장|이사|연구원|연구위원|센터장|회장|처장|박사|전문위원|논설위원|칼럼니스트|장관|차관|청장|국장|부장|팀장|위원"
             )
             for line in reversed(all_lines[-3:]):
-                if EXPERT_TITLE.search(line) and re.match(r"^[가-힣]{2,4}\s", line):
+                if EXPERT_TITLE.search(line) and re.match(r"^[가-힣]{2,4}[\s·]", line):
                     byline = line
                     break
         # 첫 3줄: 영문 기고자명 ("Lee Hyun-sang") + 다음 줄에 "author" 언급
@@ -413,22 +421,26 @@ def analyze_rules(article: dict) -> dict:
     }
 
     # L. 키워드 남용 (1.5점) — 연속·반복적으로 과도하게 특정 검색어 남용 (규정 제11조 L항)
-    t_words       = [w for w in re.findall(r"[가-힣a-zA-Z]{2,}", title) if w not in L_STOPWORDS]
+    t_words       = [w for w in re.findall(r"[가-힣a-zA-Z]{2,}", title) if w.lower() not in L_STOPWORDS]
     title_wordset = set(t_words)
     lead_wordset  = set(re.findall(r"[가-힣a-zA-Z]{2,}", body[:BODY_LEAD_CHARS]))
-    # 제목·리드 단어가 본문 단어의 접두어인 경우도 제외 (조사 결합 처리: 교사 → 교사는/교사가)
+    # 양방향 prefix 매칭으로 조사 결합 처리
+    # 정방향: 본문단어가 토픽단어+조사 (교사 → 교사는)
+    # 역방향: 본문단어가 토픽단어의 어근 (검찰 ⊂ 검찰이/검찰에)
     def is_topic_word(w: str) -> bool:
         if w in title_wordset or w in lead_wordset:
             return True
         for tw in title_wordset | lead_wordset:
             if len(tw) >= 2 and w.startswith(tw) and len(w) - len(tw) <= 2:
                 return True
+            if len(w) >= 2 and tw.startswith(w) and len(tw) - len(w) <= 2:
+                return True
         return False
     t_abused = [w for w, c in Counter(t_words).items() if c >= KEYWORD_REPEAT_TITLE]
     b_abused = [] if is_photo else [
         w for w, c in Counter(
             w for w in re.findall(r"[가-힣a-zA-Z]{2,}", body)
-            if w not in L_STOPWORDS and not is_topic_word(w)
+            if w.lower() not in L_STOPWORDS and not is_topic_word(w)
         ).items()
         if c >= KEYWORD_REPEAT_BODY
     ][:5]
