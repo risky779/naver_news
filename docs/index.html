@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>네이버 뉴스 품질 모니터링</title>
+<style>
+  :root {
+    --danger: #e74c3c; --warning: #f39c12; --ok: #27ae60;
+    --bg: #f5f6fa; --card-bg: #fff; --border: #dfe4ea;
+    --text: #2f3542; --sub: #747d8c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+  header { background: #2f3542; color: #fff; padding: 20px 32px; }
+  header h1 { font-size: 20px; font-weight: 700; }
+  header .meta { font-size: 12px; color: #a4b0be; margin-top: 4px; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+  .cards { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .card { flex: 1; min-width: 120px; background: var(--card-bg); border-radius: 8px;
+           padding: 16px; text-align: center; border-top: 4px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .danger-card { border-color: var(--danger); }
+  .warning-card { border-color: var(--warning); }
+  .ok-card { border-color: var(--ok); }
+  .total-card { border-color: #576574; }
+  .card-num { font-size: 32px; font-weight: 700; }
+  .card-label { font-size: 12px; color: var(--sub); margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card-bg);
+           border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  th { background: #f1f2f6; padding: 10px 14px; text-align: left; font-size: 12px; color: var(--sub); border-bottom: 1px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .press-row { cursor: pointer; transition: background .15s; }
+  .press-row:hover { background: #f1f2f6; }
+  .rank { width: 40px; font-weight: 700; color: var(--sub); }
+  .name { font-weight: 600; }
+  .center { text-align: center; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 4px; margin-left: 6px; font-weight: 600; }
+  .badge.danger { background: #ffeaea; color: var(--danger); }
+  .badge.warning { background: #fff8e1; color: var(--warning); }
+  .badge.ok { background: #e8f8ee; color: var(--ok); }
+  .bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .bar { height: 8px; border-radius: 4px; min-width: 2px; transition: width .3s; }
+  .bar-label { font-size: 12px; color: var(--sub); white-space: nowrap; }
+  .detail-row td { background: #f8f9fc; padding: 12px 16px; }
+  .vio-list { list-style: none; }
+  .vio-item { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+  .vio-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .vio-meta { font-size: 11px; color: var(--sub); margin-bottom: 6px; }
+  .vio-tag { display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 3px;
+              background: #ffeaea; color: var(--danger); margin-right: 4px; margin-bottom: 2px; }
+  .vio-text { font-size: 11px; color: #576574; margin-top: 4px; border-left: 3px solid var(--border); padding-left: 8px; }
+  .no-vio { color: var(--sub); font-size: 13px; padding: 8px 0; }
+  footer { text-align: center; color: var(--sub); font-size: 12px; padding: 32px 16px; }
+  @media (max-width: 600px) { .cards { gap: 8px; } .card { min-width: 80px; padding: 12px; } .card-num { font-size: 24px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>네이버 뉴스 품질 모니터링</h1>
+  <div class="meta">마지막 업데이트: 2026-05-18 10:27 &nbsp;|&nbsp; 평가 기간: 최근 24개월 (2024-05-18 ~ 현재) &nbsp;|&nbsp; 규정: 제14조 제10항</div>
+</header>
+<div class="container">
+  
+    <div class="cards">
+      <div class="card danger-card">
+        <div class="card-num">3</div>
+        <div class="card-label">해지권고 (10점↑)</div>
+      </div>
+      <div class="card warning-card">
+        <div class="card-num">4</div>
+        <div class="card-label">경고 (7점↑)</div>
+      </div>
+      <div class="card ok-card">
+        <div class="card-num">54</div>
+        <div class="card-label">정상</div>
+      </div>
+      <div class="card total-card">
+        <div class="card-num">61</div>
+        <div class="card-label">총 언론사</div>
+      </div>
+    </div>
+  <table>
+    <thead>
+      <tr>
+        <th>순위</th>
+        <th>언론사</th>
+        <th>24개월 누적 점수</th>
+        <th>분석기사</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+        <tr onclick="toggleDetail('640')" class="press-row">
+          <td class="rank">1</td>
+          <td class="name">코리아중앙데일리 <span class="badge danger">해지권고</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:97.5%;background:#e74c3c"></div><span class="bar-label">19.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-640" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088556" target="_blank" style="color:inherit;text-decoration:none">Politics that reflects migrant voices (KOR)</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:50 &nbsp;|&nbsp; 감점: 2.5점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div><div class="vio-text">[L.키워드 반복남용] Won Ok-kum</div><div class="vio-text">The author is a representative of the Migrant Center Donghaeng and is originally from Vietnam…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088555" target="_blank" style="color:inherit;text-decoration:none">Agentic AI era demands state-backed industrial strategy (KOR)</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:49 &nbsp;|&nbsp; 감점: 2.5점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div><div class="vio-text">[L.키워드 반복남용] Park Sung-hyun</div><div class="vio-text">The author is the CEO of Rebellions.</div><div class="vio-text">Last week, Wall Street was electrified…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088554" target="_blank" style="color:inherit;text-decoration:none">Korea grows intoxicated on semiconductor windfall (KOR)</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:47 &nbsp;|&nbsp; 감점: 2.5점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div><div class="vio-text">[L.키워드 반복남용] Lee Hyun-sang</div><div class="vio-text">The author is a columnist at the JoongAng Ilbo.</div><div class="vio-text">Korea’s semiconductor boom arrived almost o…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088553" target="_blank" style="color:inherit;text-decoration:none">Seoul apartment market faces triple instability (KOR)</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:45 &nbsp;|&nbsp; 감점: 2.5점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div><div class="vio-text">[L.키워드 반복남용] The photo shows apartment sale listings posted at a real estate agency in Gangnam District, south…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088552" target="_blank" style="color:inherit;text-decoration:none">Samsung strike would lead to damaging fallout (KOR)</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:44 &nbsp;|&nbsp; 감점: 2.5점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div><div class="vio-text">[L.키워드 반복남용] Leaders of the Samsung Electronics labor union attend a rally demanding hi…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088557" target="_blank" style="color:inherit;text-decoration:none">Sell-side sidecar activated shortly after the Kospi opens on Monday</a></div>
+          <div class="vio-meta">기자: BY JUNG SI-NAE [cho.yongjun1 &nbsp;|&nbsp; 2026.05.18. 오전 10:04 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] A screen in Hana Bank's trading room in central Seoul shows the Kospi on May 18, when the index plunged more than 4 percent…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088551" target="_blank" style="color:inherit;text-decoration:none">Seoul's only baby box sees placements dwindle as 'protected childbirth' laws, counseling offer more options</a></div>
+          <div class="vio-meta">기자: SHIN MIN-HEE &nbsp;|&nbsp; 2026.05.18. 오전 7:00 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] The baby box at Jusarang Community in Gwanak District, southern…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088550" target="_blank" style="color:inherit;text-decoration:none">Trump remarks on Taiwan arms package rattle South Korea, sow anxiety over U.S. commitments</a></div>
+          <div class="vio-meta">기자: BY YOON JI-WON [lee.junhyuk &nbsp;|&nbsp; 2026.05.18. 오전 7:00 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …p, right, shakes hands with Chinese President Xi Jinping at the Great Hall of the People in Beijing, China, on May 14. [UPI…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088549" target="_blank" style="color:inherit;text-decoration:none">“뛰어놀아서 죄송해요”…날 선 민원에 위축되는 학교 운동회</a></div>
+          <div class="vio-meta">기자: SEO JI-EUN &nbsp;|&nbsp; 2026.05.18. 오전 7:00 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …ays full of outdoor activities and kids joyfully expressing themselves.</div><div class="vio-text">lively: 활기찬, 생생한</div><div class="vio-text">outdoor: 야외의</div><div class="vio-text">joyfully: 즐겁게, 기쁘게</div><div class="vio-text">e…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/640/0000088548" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('262')" class="press-row">
+          <td class="rank">2</td>
+          <td class="name">신동아 <span class="badge danger">해지권고</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:52.5%;background:#e74c3c"></div><span class="bar-label">10.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-262" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/262/0000019381" target="_blank" style="color:inherit;text-decoration:none">부동산, ‘안 파는 시장’에서 ‘못 파는 시장’으로</a></div>
+          <div class="vio-meta">기자: 김제경 투미부동산컨설팅 소장 &nbsp;|&nbsp; 2026.05.18. 오전 7:01 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …잡힌다’ 믿으면 안 돼…상황 맞춰 선택</div><div class="vio-text">5월 12일 서울 시내의 한 부동산중개업소에 매물 시세표가 붙어 있다. 뉴스1</div><div class="vio-text">주사위는 던져졌다. 다주택자들을 위한 마지막 퇴로는 사실상 닫혔다. 5월 9일 양도소득세 중과 유…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/262/0000019379" target="_blank" style="color:inherit;text-decoration:none">‘조작기소 특검’‧부동산, 서울시장 승패 가를 2大 변수</a></div>
+          <div class="vio-meta">기자: 신율 명지대 정치외교학과 교수 &nbsp;|&nbsp; 2026.05.17. 오전 7:01 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …과 국정조사특위 위원들이 4월 30일 국회 의안과에 ‘윤석열 정치검찰 조작기소 진상규명 특검법’을 제출하고 있다. 뉴시스</div><div class="vio-text">6·3 전국동시지방선거 승패를 가를 최종 변수가 무엇인지 관심이 집중되고 있다. 투표일까지 보름…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/262/0000019377" target="_blank" style="color:inherit;text-decoration:none">[에세이] 사직야구장에서 배운 사랑의 방식</a></div>
+          <div class="vio-meta">기자: 양정윤 롯데자이언츠 팬 &nbsp;|&nbsp; 2026.05.16. 오전 7:01 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …남았지만 마음만은 끝내 거두지 못했다. 어쩌면 희망은, 무너진 뒤에도 손에 남는 작은 온기인지 모른다.</div><div class="vio-text">나는 바다를 가까이 두고 자랐다. 짭조름한 바람이 골목을 돌았고, 사람들의 말끝에는 늘 강한 억양과 열기가 묻어…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/262/0000019376" target="_blank" style="color:inherit;text-decoration:none">러시아 덕에 ‘전쟁 특수’ 만끽하는 북한</a></div>
+          <div class="vio-meta">기자: 채인택 국제저널리스트 tzschaeit &nbsp;|&nbsp; 2026.05.15. 오후 5:01 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …들이 러시아 파병군으로 나섰던 참전 열사들을 기리는 행사에 참석하는 모습. 노동신문</div><div class="vio-text">우려가 현실로 드러나고 있다. 2024년 10월부터 러시아에 지상군 병력을 파견한 북한이 러시아가 그 대가로 보내준 현대 군사기술과 통…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/262/0000019375" target="_blank" style="color:inherit;text-decoration:none">“두려움의 공간이 된 교실, 그래도 나는 교사입니다”</a></div>
+          <div class="vio-meta">기자: 김현미 &nbsp;|&nbsp; 2026.05.15. 오전 8:13 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] [스승의 날, 스승의 길] ‘부당한 아동학대 신고에서 살아남기’ 매뉴얼 만든 26년 차 김현주 교사</div><div class="vio-text">● 수학여행 기피하는 교사들, 대통령 발언 후폭풍…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/262/0000019374" target="_blank" style="color:inherit;text-decoration:none">6·3선거 이후 정국 향배 가를 ‘4대 최후 격전지’</a></div>
+          <div class="vio-meta">기자: 엄경영 시대정신연구소장 &nbsp;|&nbsp; 2026.05.14. 오후 5:08 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] [데이터로 보는 민심] 서울·부산·부산 북구갑·경기 평택을</div><div class="vio-text">● 서울시장, 오세훈 기세 올리며 정원오 맹추격</div><div class="vio-text">● 부산시장, 전재수-박형준 오…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/262/0000019372" target="_blank" style="color:inherit;text-decoration:none">미중이 격돌할 ‘21세기 투키디테스 함정’은 어딘가</a></div>
+          <div class="vio-meta">기자: 송승종 대전대 특임교수·국제분쟁 전문가 &nbsp;|&nbsp; 2026.05.14. 오전 7:02 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …대통령(왼쪽)과 시진핑 중국 국가주석. 뉴시스</div><div class="vio-text">2022년 우크라이나 전쟁과 2026년 이란 전쟁을 계기로 ‘투키디데스 함정’의 위험성이 갈수록 고조되고 있다. 2500여 년 전 아테네 역사학자 투키디데스는 스파르타와 아테네…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('044')" class="press-row">
+          <td class="rank">3</td>
+          <td class="name">코리아헤럴드 <span class="badge danger">해지권고</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:52.5%;background:#e74c3c"></div><span class="bar-label">10.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-044" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/044/0000284164" target="_blank" style="color:inherit;text-decoration:none">Zerobaseone opens new chapter as five-member group with ‘Ascend-’</a></div>
+          <div class="vio-meta">기자: Lee Jung-joo &nbsp;|&nbsp; 2026.05.18. 오전 6:01 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] Members reflect on lineup change, reinvention and balancing nostalgia with a new direction</div><div class="vio-text">Zerobaseone (W…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/044/0000284163" target="_blank" style="color:inherit;text-decoration:none">[Man-Ki Kim]Korea should restrict semiconductor strikes</a></div>
+          <div class="vio-meta">기자: Korea Herald khnews &nbsp;|&nbsp; 2026.05.18. 오전 5:31 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] MAN KI KIM</div><div class="vio-text">South Korea now faces a national decision: Which industries are so esse…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/044/0000284162" target="_blank" style="color:inherit;text-decoration:none">[Lee Kyong-hee]North Korea gazetteer invokes local partnerships</a></div>
+          <div class="vio-meta">기자: Korea Herald khnews &nbsp;|&nbsp; 2026.05.18. 오전 5:30 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] LEE KYONG-HEE</div><div class="vio-text">With the Iran crisis and Sino-American economic disputes dominating…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/044/0000284161" target="_blank" style="color:inherit;text-decoration:none">[Editorial] Signals without solutions</a></div>
+          <div class="vio-meta">기자: Korea Herald khnews &nbsp;|&nbsp; 2026.05.18. 오전 5:30 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …ettling into uneasy coexistence</div><div class="vio-text">The most striking outcome of the US-China summit in Beijing last week was what it did no…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/044/0000284160" target="_blank" style="color:inherit;text-decoration:none">Trump tells Lee he will play ‘necessary role’ on N. Korea: Cheong Wa Dae</a></div>
+          <div class="vio-meta">기자: Ji Da-gyum &nbsp;|&nbsp; 2026.05.17. 오후 11:50 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] US President Donald Trump waves after stepping off Marine One…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/044/0000284159" target="_blank" style="color:inherit;text-decoration:none">Lee and Trump discuss US-China summit, N. Korea in phone call</a></div>
+          <div class="vio-meta">기자: Ji Da-gyum &nbsp;|&nbsp; 2026.05.17. 오후 10:49 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …g Wa Dae via Yonhap)</div><div class="vio-text">South Korean President Lee Jae Myung and US President Donald Trump discussed the US-China summit, No…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/044/0000284157" target="_blank" style="color:inherit;text-decoration:none">Choir meets ballet: Seoul Metropolitan Chorus pairs with Yun Byul for 'Carmina Burana'</a></div>
+          <div class="vio-meta">기자: Park Ga-young &nbsp;|&nbsp; 2026.05.17. 오후 5:24 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] The ballet company behind 'Gat' wants to pass on the shiver its founder once felt with a choir behin…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('007')" class="press-row">
+          <td class="rank">4</td>
+          <td class="name">일다 <span class="badge warning">경고</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:45.0%;background:#f39c12"></div><span class="bar-label">9.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-007" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/007/0000008197" target="_blank" style="color:inherit;text-decoration:none">여성 노동운동사가 살아 숨쉬는 인천으로 역사기행</a></div>
+          <div class="vio-meta">기자: 박주연 ilda &nbsp;|&nbsp; 2026.05.17. 오전 9:42 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …’〉 탐방이 시작됐다. 페미로 깃발 모습. ⓒ일다</div><div class="vio-text">1972년, 한국 노동운동사 최초로 민주노조 ‘여성’ 지부장이 선출된 곳은 어디일까?</div><div class="vio-text">바로 인천 만석동에 있던 동일방직이다. 당시 동일방직 노동조합은 전체…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/007/0000008196" target="_blank" style="color:inherit;text-decoration:none">The Women Dreaming of a Utopia in the Male-centric Photo Industry</a></div>
+          <div class="vio-meta">기자: Park Juyeon ilda &nbsp;|&nbsp; 2026.05.16. 오후 4:27 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] Meet the team behind the feminist photo project “Utopia”</div><div class="vio-text">"If abortio…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/007/0000008195" target="_blank" style="color:inherit;text-decoration:none">농어촌 성평등 “제도는 있다, 현장에서 작동시켜라”</a></div>
+          <div class="vio-meta">기자: 호미 ilda &nbsp;|&nbsp; 2026.05.15. 오전 9:52 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 광주에서 열린 〈여성농어업인 성평등 정책 거버넌스 연속 포럼〉 (하)</div><div class="vio-text">〈여성농어업인 성평등 정책 거버넌스 포럼〉에서 민관거버넌스…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/007/0000008194" target="_blank" style="color:inherit;text-decoration:none">여성농업인 정책은 ‘공공 페미니즘’, 아래로부터 변화를</a></div>
+          <div class="vio-meta">기자: 호미 ilda &nbsp;|&nbsp; 2026.05.14. 오전 8:21 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 광주에서 열린 〈여성농어업인 성평등 정책 거버넌스 연속 포럼〉 (상)</div><div class="vio-text">2026년 4월 28일 광주 김대중컨벤션센터 컨퍼런스홀에서 열린 〈여성농어업인…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/007/0000008192" target="_blank" style="color:inherit;text-decoration:none">‘고립 출산’한 베트남인 기능실습생이 사체유기죄?</a></div>
+          <div class="vio-meta">기자: 나카시마 신이치로, 다나카 마사코 ilda &nbsp;|&nbsp; 2026.05.11. 오전 11:15 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 응우엣 씨에게 무죄 판결을…‘재생산 정의’ 재판이 될 것</div><div class="vio-text">2026년 1월 13일, 응우옌 티 응우엣 씨를 지원하는…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/007/0000008190" target="_blank" style="color:inherit;text-decoration:none">Uncomfortable, But Must Be Confronted</a></div>
+          <div class="vio-meta">기자: Kyoungmi Oh ilda &nbsp;|&nbsp; 2026.05.08. 오후 12:46 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] Sisterhat’s Exhibition Ordinary Violence</div><div class="vio-text">Set of 6 Pussy Postcards by Sisterhat (Source: Sisterhat Twitter/X…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('449')" class="press-row">
+          <td class="rank">5</td>
+          <td class="name">채널A <span class="badge warning">경고</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:40.0%;background:#f39c12"></div><span class="bar-label">8.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-449" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345520" target="_blank" style="color:inherit;text-decoration:none">인터뷰 전문: 김종욱 “부산 북갑, 장동혁, 한동훈의 경쟁 구도” [정치시그널]</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 10:20 &nbsp;|&nbsp; 감점: 2.5점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div><div class="vio-text">[L.키워드 반복남용] [정치속풀이 - 김종욱 전 민주연구원 부원장, 이민찬 국민의힘 미디어특위 부위원장, 강찬호 중앙일보 논설위원]</div><div class="vio-text">김종욱 "하정우·…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345516" target="_blank" style="color:inherit;text-decoration:none">인터뷰 전문: 오세훈 “정책적으로 할 수 있는 건 다 함께하는 거죠” [정치시그널]</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:48 &nbsp;|&nbsp; 감점: 2.5점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div><div class="vio-text">[L.키워드 반복남용] [시그널픽 - 오세훈 국민의힘 서울시장 후보]</div><div class="vio-text">"둘레길도 그거 당신이 했어? 알게 되시니까"</div><div class="vio-text">"내놓는 정책이나 입장이 전부 이…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345518" target="_blank" style="color:inherit;text-decoration:none">[속보]최승호 삼설 노조위원장 “2차 사후 조정, 성실하게 임할 것”</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 10:03 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345514" target="_blank" style="color:inherit;text-decoration:none">“나무호 피격 입장 요구” 한-이란 외교수장 통화 [자막뉴스]</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:24 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/449/0000345511" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('607')" class="press-row">
+          <td class="rank">6</td>
+          <td class="name">뉴스타파 <span class="badge warning">경고</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:37.5%;background:#f39c12"></div><span class="bar-label">7.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-607" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/607/0000003320" target="_blank" style="color:inherit;text-decoration:none">‘무죄’ 선고된 ‘한동훈 독직폭행’ 사건의 재구성</a></div>
+          <div class="vio-meta">기자: 전혁수 &nbsp;|&nbsp; 2026.05.14. 오후 6:25 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 한동훈 전 국민의힘 대표가 부산 북갑 국회의원 보궐선거에 출마했다. 한동훈 후보가 본격적으로 대중에 이름을 알린…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/607/0000003319" target="_blank" style="color:inherit;text-decoration:none">윤석열 검찰 권력 남용의 최대 수혜자 '한동훈'</a></div>
+          <div class="vio-meta">기자: 김태현 taehyun13 &nbsp;|&nbsp; 2026.05.14. 오후 6:15 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 부산 북갑 국회의원 보궐선거에 출마한 무소속 한동훈 후보. 그가 채널A 사건으로 수사를 받게 되자, 윤석열 당시 검찰총장이 권력을 남용해 수사를 방해한 사실이…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/607/0000003318" target="_blank" style="color:inherit;text-decoration:none">"윤석열 과장님 말씀 듣고 미리 문자..." 14년만에 공개된 '이남석 문자'</a></div>
+          <div class="vio-meta">기자: 한상진 &nbsp;|&nbsp; 2026.05.14. 오전 10:50 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] ‘윤석열 거짓말’ 사건 다섯 번째 재판이 서울중앙지법 형사합의21부(조순표 부장판사) 심리로 지난 11일 열렸다.…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/607/0000003317" target="_blank" style="color:inherit;text-decoration:none">‘검찰 범죄’ 특검을 해야할 50가지 이유② 조작, 조작, 또 조작</a></div>
+          <div class="vio-meta">기자: 김용진 &nbsp;|&nbsp; 2026.05.13. 오후 7:05 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 제목: ‘검찰 범죄’ 특검을 해야할 50가지 이유② 조작, 조작, 또 조작 | 이른바 ‘정치검찰 조작기소 특검법안’과 관련해 논란이 거세다. 뉴스타파는 국회 ‘조작 기소 국정조사 특위’의 청문회 기록과 기관…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/607/0000003316" target="_blank" style="color:inherit;text-decoration:none">이재명 공유 '팔레스타인 영상' 유족 찾았다... “아들 시신 돌려달라”</a></div>
+          <div class="vio-meta">기자: 이명주 silk &nbsp;|&nbsp; 2026.05.12. 오후 6:10 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …다. 한 어머니의 고통이 고스란히 전해졌다.</div><div class="vio-text">카우테르 씨가 차마 눈을 뜨고 볼 수 없었던 이 영상에는 이스라엘 군인들이 아들의 시신을 최소 다섯 번 발로 차 지붕 아래로 떨어뜨리는 장면이 담겼다. 이는 이재명 대통령이…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('036')" class="press-row">
+          <td class="rank">7</td>
+          <td class="name">한겨레21 <span class="badge warning">경고</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:35.0%;background:#f39c12"></div><span class="bar-label">7.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-036" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/036/0000053618" target="_blank" style="color:inherit;text-decoration:none">수의계약·음주운전·스토킹에도… 지방의회 의원님은 또 출마한다</a></div>
+          <div class="vio-meta">기자: 박준용 &nbsp;|&nbsp; 2026.05.18. 오전 9:56 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] [특집]징계받은 지방의원 57.8%가 다시 6·3 지방선거 출마…거대 양당은 단수공천, 유권자는 징계 이력조차 알기 어…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/036/0000053616" target="_blank" style="color:inherit;text-decoration:none">반도체 산업, 이익은 나누고 시설은 분산하는 게 오래 사는 길</a></div>
+          <div class="vio-meta">기자: 채윤태 &nbsp;|&nbsp; 2026.05.17. 오후 2:26 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] [기승전21]</div><div class="vio-text">1990년대 초 아남반도체에서 일하던 이봉렬씨가 클린룸 안에서 방진복을 입고 찍은 사진. 이봉렬 제공</div><div class="vio-text">인공지능(AI) 산업의 급성…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/036/0000053614" target="_blank" style="color:inherit;text-decoration:none">‘왕과 사는 남자’ 그곳, 오늘과 15년 전으로의 여행</a></div>
+          <div class="vio-meta">기자: 한겨레21 &nbsp;|&nbsp; 2026.05.17. 오전 8:02 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …종 국장 재현 행사에서 한 출연진이 지붕 기와에 올라 곤룡포(왕의 옷)를 흔들며 “상위복”을 세 번 외치고 있다. ‘상위복’이란 임금을 뜻하는 ‘상위’와 죽음길로 가지 말고 다시 이승으로 돌아오라는 뜻의 ‘복’이 합쳐진…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/036/0000053611" target="_blank" style="color:inherit;text-decoration:none">보수판에 바람은 분다, 한쪽으로 불지 않을 뿐</a></div>
+          <div class="vio-meta">기자: 김규남 &nbsp;|&nbsp; 2026.05.16. 오전 11:58 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] [표지이야기]영남 분위기는 ‘보수 결집’ 아닌 ‘보수 재배치’ 과정… 너무 일찍 결집했다가 막판 동력 떨어질 수도</div><div class="vio-text">부산 북구갑 보궐선거에서…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/036/0000053609" target="_blank" style="color:inherit;text-decoration:none">5월18일부터 국민 70%에 고유가 피해지원금 지급</a></div>
+          <div class="vio-meta">기자: 유선희 &nbsp;|&nbsp; 2026.05.15. 오후 6:42 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">R.광고성상품 1.0점</span></div>
+          <div class="vio-text">[R.광고성 상품정보 명시] …연합뉴스</div><div class="vio-text">2026년 5월18일부터 국민 70%에게 ‘고유가 피해지원금’이 지급된다. 수도권 거주자에겐 10만원, 비수도권엔 15만원, 인구감소지역 중 우대지원지역엔 20만원, 특별지원지역엔 25만원씩을 각각 준다. 전…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('665')" class="press-row">
+          <td class="rank">8</td>
+          <td class="name">더스쿠프 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:27.5%;background:#27ae60"></div><span class="bar-label">5.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-665" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/665/0000007384" target="_blank" style="color:inherit;text-decoration:none">월 통신비 39만원 쓰는 외벌이 가구가 놓친 것 [재테크 Lab]</a></div>
+          <div class="vio-meta">기자: 이혁기 &nbsp;|&nbsp; 2026.05.17. 오전 10:29 &nbsp;|&nbsp; 감점: 2.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span><span class="vio-tag">R.광고성상품 1.0점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 40대 부부 재무설계 1편</div><div class="vio-text">증여 일찍 하고 싶은 부부</div><div class="vio-text">노후 준비도 동시에 해야</div><div class="vio-text">통신비로 월 39만원 지출</div><div class="vio-text">평균 통신비 20만원 수준</div><div class="vio-text">줄줄 새는 지출 줄여야 해</div><div class="vio-text">평범한 직장인이 자녀에게 자산을 일찍 물려주긴…</div><div class="vio-text">[R.광고성 상품정보 명시] 40대 부부 재무설계 1편</div><div class="vio-text">증여 일찍 하고 싶은 부부</div><div class="vio-text">노후 준비도 동시에 해야</div><div class="vio-text">통신비로 월 39만원 지출</div><div class="vio-text">평균 통신비 20만원 수준</div><div class="vio-text">줄줄 새는 지출 줄여야 해</div><div class="vio-text">평범한 직장인이 자녀에게 자산을 일찍 물려주긴…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/665/0000007386" target="_blank" style="color:inherit;text-decoration:none">31만호 공급? 법 개정? 서울시장 두 후보 '재건축·재개발' 공약 왜 비판받나 [주말 Q&A]</a></div>
+          <div class="vio-meta">기자: 김정덕 &nbsp;|&nbsp; 2026.05.17. 오후 2:42 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 더스쿠프 주말 Q&A6</div><div class="vio-text">6·3 지방선거 서울시장 후보</div><div class="vio-text">정원오ㆍ오세훈 정비사업 공약</div><div class="vio-text">빠른 속도의 주택공급에 중점</div><div class="vio-text">실제 정비사업 효과 따져 보니</div><div class="vio-text">공급 미비하고 부작용 수두룩</div><div class="vio-text">정비사업 활성…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/665/0000007385" target="_blank" style="color:inherit;text-decoration:none">모나리자 지워진 눈썹에 숨은 대가의 비밀 [김용우의 미술思]</a></div>
+          <div class="vio-meta">기자: 김용우 평론가 &nbsp;|&nbsp; 2026.05.17. 오전 11:23 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 더스쿠프 아트 앤 컬처</div><div class="vio-text">김용우의 미술思 60편</div><div class="vio-text">레오나르도 다빈치 '모나리자'</div><div class="vio-text">모나리자 미소 신비로운 이유</div><div class="vio-text">눈썹 원래 없었을까 지워졌을까</div><div class="vio-text">다빈치 제자 '살라이' 작품의 의미</div><div class="vio-text">레오나르도…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('037')" class="press-row">
+          <td class="rank">9</td>
+          <td class="name">주간동아 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:27.5%;background:#27ae60"></div><span class="bar-label">5.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-037" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/037/0000038177" target="_blank" style="color:inherit;text-decoration:none">“웃돈 주고도 사려고 줄 서… 삼성전자, SK하이닉스, 마이크론 쌀독 바닥나”</a></div>
+          <div class="vio-meta">기자: 윤채원 &nbsp;|&nbsp; 2026.05.18. 오전 7:02 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] ADATA 천리바이 회장 “AI 수요가 ‘메모리 경기 순환’ 완전히 깨뜨려”</div><div class="vio-text">SK하이닉스가 개발한 ‘소캠(SOCAMM)2’ 192GB. SK하이닉스 제…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/037/0000038176" target="_blank" style="color:inherit;text-decoration:none">가족적 돌봄의 가치로 지구촌에 ‘희망’ 전하다</a></div>
+          <div class="vio-meta">기자: 송화선 &nbsp;|&nbsp; 2026.05.18. 오전 7:02 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 하나님의 교회, 지구촌 이웃과 삶의 터전 돌보는 사회공헌 활동 지속</div><div class="vio-text">‘플라스틱발자국 지우기’ 캠페인 일환으로 4…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/037/0000038175" target="_blank" style="color:inherit;text-decoration:none">하나님의 교회, 가족 행복 온도를 높이다</a></div>
+          <div class="vio-meta">기자: 송화선 &nbsp;|&nbsp; 2026.05.18. 오전 7:02 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …의 교회가 5월 10일 충북 옥천군 옥천고앤컴연수원에서 개최한 문화행사에 참여한 신자들이 환한 웃음을 짓고 있다.  하나님의 교회 제공</div><div class="vio-text">가정의 달 5월이면 자연스럽게 ‘가족’을 떠올리게 된다. 시장조사 전문기업 엠브레인…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/037/0000038173" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('308')" class="press-row">
+          <td class="rank">10</td>
+          <td class="name">시사IN <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:25.0%;background:#27ae60"></div><span class="bar-label">5.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-308" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/308/0000038276" target="_blank" style="color:inherit;text-decoration:none">진보 교육감 만든 ‘단일화 공식’, 어쩌다 이렇게 망가졌나</a></div>
+          <div class="vio-meta">기자: 이은기 &nbsp;|&nbsp; 2026.05.18. 오전 6:59 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 서울시교육감 선거에서 단일화 성공은 승리 공식이었다. 이번엔 다르다. 단일화 추진위 내부에서도 16년간 지속돼온 진보 교육감 단일화가…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/308/0000038277" target="_blank" style="color:inherit;text-decoration:none">종합특검, 시작은 초라했으나 끝은 창대할까? [특검IN]</a></div>
+          <div class="vio-meta">기자: 전다현 &nbsp;|&nbsp; 2026.05.18. 오전 6:58 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 3대 특검 후속으로 출범한 2차 종합특검이 최장 수사 기간의 절반에 도달했다. 일각에서는 성과 부진 우려가 나오지만, 정작 특검 내부는 수사 진행 상황에 자신감…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/308/0000038274" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/308/0000038270" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('009')" class="press-row">
+          <td class="rank">11</td>
+          <td class="name">매일경제 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:20.0%;background:#27ae60"></div><span class="bar-label">4.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-009" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/009/0005681373" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/009/0005681372" target="_blank" style="color:inherit;text-decoration:none">“삼전노조, 니들 너무 선 넘었어”…진보 스피커도 작심 쓴소리</a></div>
+          <div class="vio-meta">기자: 전종헌 매경 디지털뉴스룸 &nbsp;|&nbsp; 2026.05.18. 오전 9:57 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] 전종헌 매경 디지털뉴스룸</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/009/0005681371" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/009/0005681370" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('586')" class="press-row">
+          <td class="rank">12</td>
+          <td class="name">시사저널 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:17.5%;background:#27ae60"></div><span class="bar-label">3.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-586" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/586/0000129312" target="_blank" style="color:inherit;text-decoration:none">"돈 내고 새치기?" 놀이공원 '매직패스'에 분노하는 부모들 [남인숙의 신중년이 온다]</a></div>
+          <div class="vio-meta">기자: 남인숙 작가 sisa &nbsp;|&nbsp; 2026.05.18. 오전 8:00 &nbsp;|&nbsp; 감점: 2.0점</div>
+          <div><span class="vio-tag">D.AI생성 미표시 0.5점</span><span class="vio-tag">Q.유가기사 1.5점</span></div>
+          <div class="vio-text">[Q.유가기사 전송] …존재감조차 희박했던 매직패스는 이제 비용뿐 아니라 예매 자체도 경쟁을 통과해야 가능한 제도가 되었다.</div><div class="vio-text">한정 수량에 선착순 판매이기 때문에 인기 있는 날짜에는 유명 아이돌 콘서트 티켓을 구하듯 '피케팅('피가 튄다'는 표…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/586/0000129319" target="_blank" style="color:inherit;text-decoration:none">KAI에 '1조원' 쏟아붓는 한화…'한국판 록히드마틴' 전략 본궤도</a></div>
+          <div class="vio-meta">기자: 허인회 &nbsp;|&nbsp; 2026.05.18. 오전 10:00 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …인수전 주도권 선점</div><div class="vio-text">"국가대표 방산기업 필요"</div><div class="vio-text">글로벌 톱티어 방산기업을 꿈꾸는 한화그룹의 시계가 빨라지고 있다. 국내 유일의 항공기 체계종합 기업인 한국항공우주산업(KAI)의 지분을 매집하는 동시에 전격적으로 경영 참…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('353')" class="press-row">
+          <td class="rank">13</td>
+          <td class="name">중앙SUNDAY <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:17.5%;background:#27ae60"></div><span class="bar-label">3.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-353" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/353/0000055462" target="_blank" style="color:inherit;text-decoration:none">“해봤자”→“해볼만”…좁혀진 여야 격차</a></div>
+          <div class="vio-meta">기자: 신수민 &nbsp;|&nbsp; 2026.05.16. 오전 1:33 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 6·3 지선, 국회의원 재보선 후보자 등록 마감</div><div class="vio-text">6·3 지방선거(제9회)와 국회의원 재·보궐선거 후보 등록이 15일 마감되면서 본격적인 선거전…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/353/0000055464" target="_blank" style="color:inherit;text-decoration:none">[사진] 1972년 vs 2026년…달라진 중국 위상</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.16. 오전 1:39 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/353/0000055459" target="_blank" style="color:inherit;text-decoration:none">[outlook] 트럼프·시진핑, 현상유지하며 ‘시간벌기’ 합의한 셈</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.16. 오전 1:26 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('028')" class="press-row">
+          <td class="rank">14</td>
+          <td class="name">한겨레 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:17.5%;background:#27ae60"></div><span class="bar-label">3.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-028" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/028/0002805512" target="_blank" style="color:inherit;text-decoration:none">‘우주 쓰레기’ 청소부, 누군가 봤더니…태양의 ‘흑점’</a></div>
+          <div class="vio-meta">기자: 곽노필 &nbsp;|&nbsp; 2026.05.18. 오전 9:32 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 곽노필의 미래창</div><div class="vio-text">태양 흑점 수 임계치 넘으면 추락 급가속</div><div class="vio-text">지구 대기 팽창으로 공기 저항 커진 효과</div><div class="vio-text">태양 활동이 활발해지면 우주…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/028/0002805511" target="_blank" style="color:inherit;text-decoration:none">[뷰리핑] 이 대통령, 트럼프와 통화</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:16 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/028/0002805510" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('648')" class="press-row">
+          <td class="rank">15</td>
+          <td class="name">비즈워치 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:15.0%;background:#27ae60"></div><span class="bar-label">3.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-648" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/648/0000047224" target="_blank" style="color:inherit;text-decoration:none">지주회사 재평가 모멘텀 아직도 남아있다...KB증권, 목표가 줄상향</a></div>
+          <div class="vio-meta">기자: 이규연 &nbsp;|&nbsp; 2026.05.18. 오전 9:29 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] KB증권 “지주사 ‘리레이팅’ 지속 전망, 정책 모멘텀 유효”</div><div class="vio-text">지난해 탄핵 이후 5월 7일까지 지주사 주가 203% 상승</div><div class="vio-text">앞…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/648/0000047220" target="_blank" style="color:inherit;text-decoration:none">'슬리퍼' 신고 '재킷' 벗고…소노트리니티 신사옥의 진풍경</a></div>
+          <div class="vio-meta">기자: 정혜인 &nbsp;|&nbsp; 2026.05.18. 오전 8:10 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …읽는 학생이 뒤섞여 창밖 마곡 풍경을 바라보거나 대화를 나눴다. 빈 자리를 찾기 어려울 정도였다.</div><div class="vio-text">이곳은 소노트리니티그룹 신사옥 '소노트리니티 커먼스(SONO TRINITY COMMONS)'다. 1층과 2층은 그룹 임직원뿐…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('310')" class="press-row">
+          <td class="rank">16</td>
+          <td class="name">여성신문 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:15.0%;background:#27ae60"></div><span class="bar-label">3.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-310" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/310/0000136693" target="_blank" style="color:inherit;text-decoration:none">오늘부터 2차 고유가 지원금...오늘 출생연도 끝자리 1·6 신청</a></div>
+          <div class="vio-meta">기자: 유영혁 &nbsp;|&nbsp; 2026.05.18. 오전 6:38 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …청자들을 위한 안내문을 붙이고 있다. ⓒ연합뉴스</div><div class="vio-text">18일부터 소득 하위 70% 국민에게 1인당 10만~25만원의 '고유가 피해 지원금'이 지급된다. 신청 첫 날 대상자는 이날 요일제 적용에 따라 출생연도 끝자리가 '1…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/310/0000136691" target="_blank" style="color:inherit;text-decoration:none">“살아남은 우리가 이 세상 바꿔낼 것”… 강남역 10주기, 500명이 도로에 누운 이유</a></div>
+          <div class="vio-meta">기자: 신선진 &nbsp;|&nbsp; 2026.05.17. 오후 8:31 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …력·무차별 여성살해 반복된 지난 10년</div><div class="vio-text">157개 단체 500명 “추모 딛고 행동할 것”</div><div class="vio-text">17일 서울 강남구 강남역 10번 출구 앞에서 열린 \'강남역 여성살해사건 10주기 추모행동\'에서 참여자들이 구호를 외치고 있다.…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('277')" class="press-row">
+          <td class="rank">17</td>
+          <td class="name">아시아경제 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:15.0%;background:#27ae60"></div><span class="bar-label">3.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-277" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/277/0005764243" target="_blank" style="color:inherit;text-decoration:none">법률·게임·뷰티까지 자리잡은 'K-AI'…산업 현장서 존재감 키운다</a></div>
+          <div class="vio-meta">기자: 김종화 &nbsp;|&nbsp; 2026.05.18. 오전 10:19 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 업스테이지·SKT·LG·NC AI 활용 확산…신물질 개발·스타트업 생태계까지 확대</div><div class="vio-text">국내 인공지능(AI) 모델들이 법률 서비스와 게임, 화장품…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/277/0005764241" target="_blank" style="color:inherit;text-decoration:none">"협동조합, 中企 AX 허브 역할 수행해야"</a></div>
+          <div class="vio-meta">기자: 김철현 &nbsp;|&nbsp; 2026.05.18. 오전 10:17 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 중기중앙회, '중소기업 新 성장동력, AX 확산정책 토론회' 개최</div><div class="vio-text">중소기업중앙회는 18일 여의도 중기중앙회에서 '중소기업 新 성장동력, 'AI 전환(…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('094')" class="press-row">
+          <td class="rank">18</td>
+          <td class="name">월간 산 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:15.0%;background:#27ae60"></div><span class="bar-label">3.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-094" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/094/0000013533" target="_blank" style="color:inherit;text-decoration:none">평일엔 장애인 돌봄, 주말엔 극한 산행 이유 있는 '두 집 살림' [산지컬 100]</a></div>
+          <div class="vio-meta">기자: 서현우 &nbsp;|&nbsp; 2026.05.18. 오전 7:50 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …차로 20분쯤 가면 나오는 큰 소나무가 있는 마을이다. 최씨는 "그 소나무가 우황청심환 상표 모델"이라고 했다. 거기서 8남매와 함께 왁자지껄 옥신각신 컸다.</div><div class="vio-text">"시골이라 빨리 다니고 뛰어다니고 이런 걸 좋아했어요.…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/094/0000013527" target="_blank" style="color:inherit;text-decoration:none">선운산 '새내기'의 11가지 공략법 [5.11이 보인다]</a></div>
+          <div class="vio-meta">기자: 정유진 &nbsp;|&nbsp; 2026.05.14. 오전 7:50 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …유튜브나 인스타그램 등 온라인 사이트에서 해당 루트 영상을 검색해 정보를 얻을 수 있다. 직접 바위에 붙어 홀드를 살피고 동작을 만들어 내는 과정 또한 베타 수집의 한 가지 방법이다.</div><div class="vio-text">▶ 5.11이 보인다</div><div class="vio-text">연재의 최종…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('033')" class="press-row">
+          <td class="rank">19</td>
+          <td class="name">주간경향 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:15.0%;background:#27ae60"></div><span class="bar-label">3.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-033" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/033/0000050857" target="_blank" style="color:inherit;text-decoration:none">캘리포니아 시미밸리, ‘1 대 99의 사회’ 지옥문을 연 레이건[손호철의 미국사 뒤집어보기](35)</a></div>
+          <div class="vio-meta">기자: 손호철 서강대 명예교수 &nbsp;|&nbsp; 2026.05.18. 오전 6:04 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 레이건 박물관에는 카우보이 복장의 레이건 전신상이 설치돼 있다. 손호철 제공</div><div class="vio-text">“40대 대통령 로널드 레이건!”…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/033/0000050855" target="_blank" style="color:inherit;text-decoration:none">희망을 다시 쓰는 ‘선결제 연대’…누군가 미리 낸 병원비로 ‘노동자 아픔’ 나눈다</a></div>
+          <div class="vio-meta">기자: 김향미 &nbsp;|&nbsp; 2026.05.18. 오전 6:02 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …병원비 선결제 기부가 이어지고 있다.</div><div class="vio-text">노동자 병원 짓고, 병원비 선결제까지 이어진 마음</div><div class="vio-text">서울 중랑구에 있는 공익형 민간병원인 녹색병원이 건립 추진 중인 전태일의료센터(지상 5층·지하 3층·34병상 규모)는 노동자…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('023')" class="press-row">
+          <td class="rank">20</td>
+          <td class="name">조선일보 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:15.0%;background:#27ae60"></div><span class="bar-label">3.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-023" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/023/0003977016" target="_blank" style="color:inherit;text-decoration:none">박지원 “삼성전자 파업하면 국민 분노” 박용진 “노조 ‘국민 밉상’ 전락할 수도”</a></div>
+          <div class="vio-meta">기자: 김경필 &nbsp;|&nbsp; 2026.05.18. 오전 9:49 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …불어민주당 박지원 의원은 “삼성전자 노조가 파업하면 국민들이 분노한다”며 “파업을 절대 안 해야 한다”고 말했다. 박용진 전 의원도 노조를 겨냥해 “지속 가능성은 생각 안 하느냐”며 “지금 파업하면 노조가 ‘국민 밉상’…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/023/0003977012" target="_blank" style="color:inherit;text-decoration:none">금리 인상기인데 변동 대출 더 늘리는 은행들…고정형 금리 크게 올라</a></div>
+          <div class="vio-meta">기자: 김신영 &nbsp;|&nbsp; 2026.05.18. 오전 9:20 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …출 상담을 받고 있다. /뉴스1</div><div class="vio-text">신혼집 주택 대출을 받기 위해 지난달 은행을 찾은 30대 직장인 김모씨는 금리 종류를 선택하느라 갈등을 많이 했다. 5년 동안 금리가 고정되는 대출은 금리가 연 4.85%, 변동형 대출…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('016')" class="press-row">
+          <td class="rank">21</td>
+          <td class="name">헤럴드경제 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:15.0%;background:#27ae60"></div><span class="bar-label">3.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-016" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/016/0002644731" target="_blank" style="color:inherit;text-decoration:none">“삼성, 韓 기업 대표해 협상하는 것”…파업 목전 사후조정, 전 세계 이목 집중 [삼성전자 노사 최후담판]</a></div>
+          <div class="vio-meta">기자: 김현일 joze  go &nbsp;|&nbsp; 2026.05.18. 오전 10:21 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …부문 피플팀장과 김형로 부사장이 18일 정부세종청사 중앙노동위원회에서 열리는 2차 사후조정 회의에 참석하고 있다. 총파업 예고일을 사흘 앞두고 이번 2차 사후조정은 마지막 교섭이 될 전망이다. [연합]</div><div class="vio-text">삼성그룹…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/016/0002644729" target="_blank" style="color:inherit;text-decoration:none">시총 35조에 영업익 85억? 한미반도체 ‘실적쇼크’…‘HBM 프리미엄’ 2분기가 가른다[중기+]</a></div>
+          <div class="vio-meta">기자: 홍석희 hong &nbsp;|&nbsp; 2026.05.18. 오전 10:19 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …인천 본사에서 한미USA 법인 설립 계획을 발표하고 있다. [한미반도체]</div><div class="vio-text">한미반도체 ‘실적쇼크’… 1분기 영업익 85억 전년比 88% 급감</div><div class="vio-text">주성·신성·한화세미텍도 1Q 실적 공백... 장비주 ‘보릿고개’</div><div class="vio-text">곽동신…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('014')" class="press-row">
+          <td class="rank">22</td>
+          <td class="name">파이낸셜뉴스 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:15.0%;background:#27ae60"></div><span class="bar-label">3.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-014" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/014/0005522790" target="_blank" style="color:inherit;text-decoration:none">'폭풍 성장' 노타, 1분기 매출 전년 比 53배↑</a></div>
+          <div class="vio-meta">기자: 조윤주 &nbsp;|&nbsp; 2026.05.18. 오전 10:19 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …해 메모리 사용량을 약 72% 줄이면서도 성능을 유지하는 데 성공했다. 노타 제공</div><div class="vio-text">[파이낸셜뉴스] 노타가 AI 경량화·최적화 기술을 앞세워 본격적인 매출 성장 구간에 진입했다. 온디바이스 AI와 데이터센터, 엣지 AI…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/014/0005522778" target="_blank" style="color:inherit;text-decoration:none">판례 검색·게임 AI·화장품 개발까지…산업 현장 파고든 K-AI</a></div>
+          <div class="vio-meta">기자: 조윤주 &nbsp;|&nbsp; 2026.05.18. 오전 10:01 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] (출처=연합뉴스)</div><div class="vio-text">[파이낸셜뉴스] 과학기술정보통신부가 국내 기업들의 '독자 AI 모델' 현장 확산 사례를 공개하며 K-AI 생태계 띄우기에 나섰다. 해외 빅테크 중심의 생성형 AI 경쟁…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('006')" class="press-row">
+          <td class="rank">23</td>
+          <td class="name">미디어오늘 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:15.0%;background:#27ae60"></div><span class="bar-label">3.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-006" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/006/0000135781" target="_blank" style="color:inherit;text-decoration:none">삼성전자 파업 위기에 조선 "노동권익 아니다"·동아 "파업 접어라"</a></div>
+          <div class="vio-meta">기자: 윤수현 &nbsp;|&nbsp; 2026.05.18. 오전 7:33 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …것”</div><div class="vio-text">대만 협상 카드로 삼은 트럼프… “주한 미군도 우려된다”</div><div class="vio-text">▲ 2026년 4월23일 평택사업장 앞에서 삼성전자 직원 약 4만 명이 모여 결의대회를 열었다. 사진=삼성전자 노조 공동투쟁본부</div><div class="vio-text">파업을 앞둔 삼성전자 노사가…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/006/0000135774" target="_blank" style="color:inherit;text-decoration:none">삼성전자 사장단, 조선·동아·매경·한경 1면 광고 "국민 여러분께 사과"</a></div>
+          <div class="vio-meta">기자: 박서연 &nbsp;|&nbsp; 2026.05.17. 오후 1:12 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] [아침신문 솎아보기] 이재용 회장, 16일 “국민 여러분께 사죄” 사과 발표</div><div class="vio-text">삼성전자 노조위원장 조선일보 인터뷰 “임원은 불황 때도 3880억 성과급”</div><div class="vio-text">김민석 총리 “삼성전자 총파업 시 긴급조…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('127')" class="press-row">
+          <td class="rank">24</td>
+          <td class="name">기자협회보 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:12.5%;background:#27ae60"></div><span class="bar-label">2.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-127" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/127/0000039254" target="_blank" style="color:inherit;text-decoration:none">법원 "'2인 체제' 방통위도 의결정족수 요건 충족"</a></div>
+          <div class="vio-meta">기자: 김한내 &nbsp;|&nbsp; 2026.05.15. 오후 5:28 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 박찬욱 KBS 감사 '신임 감사 임명처분 무효 확인 소송' 1심 패소</div><div class="vio-text">‘2인 체제’ 방송통신위원회에서 KBS 감사를 임명…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/127/0000039250" target="_blank" style="color:inherit;text-decoration:none">JTBC '마약왕 박왕열 인터뷰' 보도, 필리핀 감옥 취재로 범죄자 인도절차 이끌어</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.14. 오후 4:46 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('119')" class="press-row">
+          <td class="rank">25</td>
+          <td class="name">데일리안 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:12.5%;background:#27ae60"></div><span class="bar-label">2.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-119" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/119/0003091450" target="_blank" style="color:inherit;text-decoration:none">부동산 PF 수수료 ‘32개→11개’ 정비…금감원 운영실태 점검 결과 공개</a></div>
+          <div class="vio-meta">기자: 손지연 &nbsp;|&nbsp; 2026.05.18. 오전 10:00 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 패널티·만기연장 수수료 사실상 폐지…용역 대가 중심 체계 개편</div><div class="vio-text">PF 신규취급 상위 17개사 점검…“공정성·투명성 개선 확인”</div><div class="vio-text">일부 금융사 정보제공·내부통제 미흡 사례 확인…추…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/119/0003091451" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('088')" class="press-row">
+          <td class="rank">26</td>
+          <td class="name">매일신문 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:12.5%;background:#27ae60"></div><span class="bar-label">2.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-088" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/088/0001010353" target="_blank" style="color:inherit;text-decoration:none">"소재부터 후공정까지"…AI 공급망 기대에 두산그룹주 동반 부각</a></div>
+          <div class="vio-meta">기자: 허재호 &nbsp;|&nbsp; 2026.05.18. 오전 10:14 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] SK실트론 인수 작업 마무리 단계…웨이퍼·소재·테스트 밸류체인 확대 기대</div><div class="vio-text">블랙웰 확대에 고성능 CCL 수요 증가…두산전자BG 공급망 핵심 부각</div><div class="vio-text">두산테스나, 신규…</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/088/0001010356" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('024')" class="press-row">
+          <td class="rank">27</td>
+          <td class="name">매경이코노미 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:12.5%;background:#27ae60"></div><span class="bar-label">2.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-024" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/024/0000105617" target="_blank" style="color:inherit;text-decoration:none">합치면 이긴다? 지선 후보 단일화의 조건 [신율의 정치 읽기]</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.17. 오후 9:01 &nbsp;|&nbsp; 감점: 2.5점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div><div class="vio-text">[L.키워드 반복남용] 부산 북갑 재보궐선거에 출마한 하정우 민주당 후보와 한동훈 무소속 후보가 부산 북구 구포시장에서 유세를 펼치던 중 만나 인사하고 있다. (연합뉴스)</div><div class="vio-text">이번 지…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('666')" class="press-row">
+          <td class="rank">28</td>
+          <td class="name">경기일보 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:10.0%;background:#27ae60"></div><span class="bar-label">2.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-666" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/666/0000107446" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/666/0000107445" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('047')" class="press-row">
+          <td class="rank">29</td>
+          <td class="name">오마이뉴스 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:10.0%;background:#27ae60"></div><span class="bar-label">2.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-047" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/047/0002516036" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/047/0002516030" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('018')" class="press-row">
+          <td class="rank">30</td>
+          <td class="name">이데일리 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:10.0%;background:#27ae60"></div><span class="bar-label">2.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-018" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/018/0006284208" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li>
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/018/0006284207" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('584')" class="press-row">
+          <td class="rank">31</td>
+          <td class="name">동아사이언스 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:7.5%;background:#27ae60"></div><span class="bar-label">1.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-584" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/584/0000037642" target="_blank" style="color:inherit;text-decoration:none">'부활' 꿈꾸며 냉동인간 선택…전세계 4000명 넘어</a></div>
+          <div class="vio-meta">기자: 박동현 &nbsp;|&nbsp; 2026.05.16. 오전 8:01 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …가 될 수 있다. 영화 속 캡틴 아메리카의 신체는 완전히 냉동돼 생물학적 시계가 멈춰버린 셈이다.</div><div class="vio-text">반면 ‘동면’ 기술은 인간을 얼음마냥 얼려버리는 냉동과는 다르게 겨울잠에 들게 하려는 기술이다. 동면 상태의 동물은 신…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('346')" class="press-row">
+          <td class="rank">32</td>
+          <td class="name">헬스조선 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:7.5%;background:#27ae60"></div><span class="bar-label">1.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-346" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/346/0000109901" target="_blank" style="color:inherit;text-decoration:none">“암으로 오인 쉬워… ‘IgG4 관련 질환’, 조기 진단 중요”</a></div>
+          <div class="vio-meta">기자: 신소영 &nbsp;|&nbsp; 2026.05.18. 오전 8:01 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 헬스조선 명의 톡톡' 명의 인터뷰</div><div class="vio-text">'IgG4 관련 질환 명의' 건국대병원 류마티스내과 민홍기 교수</div><div class="vio-text">건국대병원 류마티스내과 민홍기 교수가 IgG4 관련…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('123')" class="press-row">
+          <td class="rank">33</td>
+          <td class="name">조세일보 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:7.5%;background:#27ae60"></div><span class="bar-label">1.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-123" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/123/0002383186" target="_blank" style="color:inherit;text-decoration:none">PF 수수료 ‘군살빼기’ 본격화…금감원 “불합리 관행 상당 부분 개선”</a></div>
+          <div class="vio-meta">기자: 이민재 &nbsp;|&nbsp; 2026.05.18. 오전 10:01 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 금감원, 17개 금융사 대상 1분기 PF 수수료 운영실태 점검</div><div class="vio-text">모범규준 시행 후 수수료 항목 32개서 11개로 축소</div><div class="vio-text">패널티·만기연장 수수료 신규…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('092')" class="press-row">
+          <td class="rank">34</td>
+          <td class="name">지디넷코리아 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:7.5%;background:#27ae60"></div><span class="bar-label">1.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-092" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/092/0002423118" target="_blank" style="color:inherit;text-decoration:none">레드햇 제품 수석이사 "RHEL10, 기업 인프라 관리 플랫폼으로 진화"</a></div>
+          <div class="vio-meta">기자: 김미정 &nbsp;|&nbsp; 2026.05.18. 오전 9:59 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …로그·운영 정보 연동…"PQC로 보안 강화"</div><div class="vio-text">[애틀랜타(미국)=김미정 기자] "레드햇 엔터프라이즈 리눅스(RHEL)는 인공지능(AI)을 구동하는 운영체제(OS) 수준을 넘어섰습니다. AI로 기업 인프라 상태를 파악하고,…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('081')" class="press-row">
+          <td class="rank">35</td>
+          <td class="name">서울신문 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:7.5%;background:#27ae60"></div><span class="bar-label">1.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-081" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/081/0003644592" target="_blank" style="color:inherit;text-decoration:none">[서울데이터랩]개장 직후 인기 검색 종목 20選</a></div>
+          <div class="vio-meta">기자: 정연호 &nbsp;|&nbsp; 2026.05.18. 오전 10:08 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …가장 많이 몰린 종목은 삼성전자(005930)로 검색 비율 20.49%를 기록했지만 주가는 26만 6000원으로 전일 대비 4500원(1.66%) 내렸다. SK하이닉스(000660)도 검색 비율 14.57%로 뒤를 이었…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('030')" class="press-row">
+          <td class="rank">36</td>
+          <td class="name">전자신문 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:7.5%;background:#27ae60"></div><span class="bar-label">1.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-030" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/030/0003428515" target="_blank" style="color:inherit;text-decoration:none">“팬트리 넓어” 세부 설계 호평 속 '아크로 리버스카이' 26일 특공</a></div>
+          <div class="vio-meta">기자: 서희원 shw &nbsp;|&nbsp; 2026.05.18. 오전 10:23 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 아크로 리버스카이 팬트리. 사진=아크로 리버스카이</div><div class="vio-text">서울 노량진뉴타운에서 두 번째로 분양에 나서는 '아크로 리버스…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('020')" class="press-row">
+          <td class="rank">37</td>
+          <td class="name">동아일보 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:7.5%;background:#27ae60"></div><span class="bar-label">1.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-020" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/020/0003720329" target="_blank" style="color:inherit;text-decoration:none">급하게 빼면 ‘요요’ 온다?… 임상시험 결과는 정반대[바디플랜]</a></div>
+          <div class="vio-meta">기자: 박해식 &nbsp;|&nbsp; 2026.05.18. 오전 10:20 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] 사진=게티이미지뱅크.</div><div class="vio-text">‘살을 천천히 빼야 요요 현상을 막을 수 있다’는 통념과 달리, 빠른 체중 감량이 오히려 더 큰 감량 효과와 1년 뒤 더 나은 체중 유지 효과를 보였다는 임상 시험 결과가 나왔…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('003')" class="press-row">
+          <td class="rank">38</td>
+          <td class="name">뉴시스 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:7.5%;background:#27ae60"></div><span class="bar-label">1.5점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-003" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/003/0013950740" target="_blank" style="color:inherit;text-decoration:none">제주항공, 1~4월 日 노선 점유율 15% '1위'…"지배력 확장 나선다"</a></div>
+          <div class="vio-meta">기자: 류인선 &nbsp;|&nbsp; 2026.05.18. 오전 10:08 &nbsp;|&nbsp; 감점: 1.5점</div>
+          <div><span class="vio-tag">L.키워드남용 1.5점</span></div>
+          <div class="vio-text">[L.키워드 반복남용] …일본 여행 수요에 맞춰 임시증편 등을 통해 공급 확대에 나선다.</div><div class="vio-text">인천~도쿄(나리타) 노선은 5월에 주 14회를 증편해 주 49회를 운항하고, 6월에 주 46회, 7월에 주 43회를 운항한다.</div><div class="vio-text">인천~나고야 노선은 주…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('661')" class="press-row">
+          <td class="rank">39</td>
+          <td class="name">JIBS <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:5.0%;background:#27ae60"></div><span class="bar-label">1.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-661" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/661/0000076422" target="_blank" style="color:inherit;text-decoration:none">나는 얼마 받나...오늘부터 '고유가 지원금' 2차 지급</a></div>
+          <div class="vio-meta">기자: 신동원 &nbsp;|&nbsp; 2026.05.18. 오전 4:35 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">R.광고성상품 1.0점</span></div>
+          <div class="vio-text">[R.광고성 상품정보 명시] 소득하위 70% 3,600만 명 대상…1차 미신청자도 신청 가능</div><div class="vio-text">수도권 10만원·비수도권 15만원·인구감소지역 20~25만원</div><div class="vio-text">연 30억 매출 이하 편의점·식당·미용실·학원 등서 사용 가능…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('660')" class="press-row">
+          <td class="rank">40</td>
+          <td class="name">kbc광주방송 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:5.0%;background:#27ae60"></div><span class="bar-label">1.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-660" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/660/0000109569" target="_blank" style="color:inherit;text-decoration:none">2차 고유가 지원금 신청 시작...최대 25만 원 지급</a></div>
+          <div class="vio-meta">기자: 신민지 &nbsp;|&nbsp; 2026.05.18. 오전 9:20 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">R.광고성상품 1.0점</span></div>
+          <div class="vio-text">[R.광고성 상품정보 명시] …용됐습니다.</div><div class="vio-text">예를 들어 직장가입자 1인 가구인 경우 올해 3월 부과된 건강보험료(장기 요양보험료 제외)가 13만 원 이하면 고유가 피해지원금을 신청할 수 있습니다.</div><div class="vio-text">연 소득으로 환산하면 4,340만 원 이하에 해당합니다.…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('657')" class="press-row">
+          <td class="rank">41</td>
+          <td class="name">대구MBC <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:5.0%;background:#27ae60"></div><span class="bar-label">1.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-657" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/657/0000051523" target="_blank" style="color:inherit;text-decoration:none"></a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp;  &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('053')" class="press-row">
+          <td class="rank">42</td>
+          <td class="name">주간조선 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:5.0%;background:#27ae60"></div><span class="bar-label">1.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-053" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/053/0000058375" target="_blank" style="color:inherit;text-decoration:none">오늘부터 고유가 지원금 2차 신청…최대 25만원 받는다</a></div>
+          <div class="vio-meta">기자: 이소진 &nbsp;|&nbsp; 2026.05.18. 오전 8:40 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">R.광고성상품 1.0점</span></div>
+          <div class="vio-text">[R.광고성 상품정보 명시] …다. 기한 내 사용하지 않은 잔액은 자동 소멸된다.</div><div class="vio-text">지원 금액은 거주 지역에 따라 다르다. 수도권 주민은 10만원, 비수도권 주민은 15만원을 받는다. 인구감소지역 우대지원지역 주민은 20만원, 특별지원지역 주민은 25만…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('031')" class="press-row">
+          <td class="rank">43</td>
+          <td class="name">아이뉴스24 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:5.0%;background:#27ae60"></div><span class="bar-label">1.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-031" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/031/0001029250" target="_blank" style="color:inherit;text-decoration:none">신원, 1분기 매출 2808억원…수출·내수 고른 성장</a></div>
+          <div class="vio-meta">기자: 박은경 &nbsp;|&nbsp; 2026.05.18. 오전 9:46 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">R.광고성상품 1.0점</span></div>
+          <div class="vio-text">[R.광고성 상품정보 명시] …성장과 함께 체질 개선 노력에 힘입어 영업이익도 큰 폭 개선했다.</div><div class="vio-text">18일 신원은 1분기 매출액 2808억2800만원, 영업이익 62억8000만원을 기록했다고 발표했다. 전년 대비 각각 8.2%, 1.2% 증가했다.</div><div class="vio-text">신원…</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('025')" class="press-row">
+          <td class="rank">44</td>
+          <td class="name">중앙일보 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:5.0%;background:#27ae60"></div><span class="bar-label">1.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-025" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/025/0003523976" target="_blank" style="color:inherit;text-decoration:none">[속보] 코스피 급락에 매도 사이드카 발동</a></div>
+          <div class="vio-meta">기자: (없음) &nbsp;|&nbsp; 2026.05.18. 오전 9:24 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">C.바이라인 없음 1.0점</span></div>
+          <div class="vio-text">[C.바이라인 없음] (바이라인 없음)</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('002')" class="press-row">
+          <td class="rank">45</td>
+          <td class="name">프레시안 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:5.0%;background:#27ae60"></div><span class="bar-label">1.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-002" class="detail-row" style="display:none">
+          <td colspan="4">
+            <ul class="vio-list">
+        <li class="vio-item">
+          <div class="vio-title"><a href="https://n.news.naver.com/mnews/article/002/0002441777" target="_blank" style="color:inherit;text-decoration:none">KTX·SRT중련열차도 '전주·전라선'은 여전히 소외…주민 편익 외면한 채 정책결정</a></div>
+          <div class="vio-meta">기자: 최인 &nbsp;|&nbsp; 2026.05.18. 오전 10:09 &nbsp;|&nbsp; 감점: 1.0점</div>
+          <div><span class="vio-tag">E.선정성 1.0점</span></div>
+          <div class="vio-text">[E.선정성] KTX·SRT중련열차도 '전주·전라선'은 여전히 소외…주민 편익 외면한 채 정책결정</div>
+        </li></ul>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('662')" class="press-row">
+          <td class="rank">46</td>
+          <td class="name">농민신문 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-662" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('659')" class="press-row">
+          <td class="rank">47</td>
+          <td class="name">전주MBC <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-659" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('417')" class="press-row">
+          <td class="rank">48</td>
+          <td class="name">동행미디어 시대 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-417" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('296')" class="press-row">
+          <td class="rank">49</td>
+          <td class="name">코메디닷컴 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-296" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('293')" class="press-row">
+          <td class="rank">50</td>
+          <td class="name">블로터 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-293" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('243')" class="press-row">
+          <td class="rank">51</td>
+          <td class="name">이코노미스트 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-243" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('145')" class="press-row">
+          <td class="rank">52</td>
+          <td class="name">레이디경향 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-145" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('138')" class="press-row">
+          <td class="rank">53</td>
+          <td class="name">디지털데일리 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-138" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('082')" class="press-row">
+          <td class="rank">54</td>
+          <td class="name">부산일보 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-082" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('055')" class="press-row">
+          <td class="rank">55</td>
+          <td class="name">SBS <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">9건</td>
+        </tr>
+        <tr id="detail-055" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('052')" class="press-row">
+          <td class="rank">56</td>
+          <td class="name">YTN <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-052" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('050')" class="press-row">
+          <td class="rank">57</td>
+          <td class="name">한경비즈니스 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-050" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('032')" class="press-row">
+          <td class="rank">58</td>
+          <td class="name">경향신문 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-032" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('011')" class="press-row">
+          <td class="rank">59</td>
+          <td class="name">서울경제 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-011" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('008')" class="press-row">
+          <td class="rank">60</td>
+          <td class="name">머니투데이 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-008" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+        <tr onclick="toggleDetail('001')" class="press-row">
+          <td class="rank">61</td>
+          <td class="name">연합뉴스 <span class="badge ok">정상</span></td>
+          <td><div class="bar-wrap"><div class="bar" style="width:0.0%;background:#27ae60"></div><span class="bar-label">0.0점</span></div></td>
+          <td class="center">10건</td>
+        </tr>
+        <tr id="detail-001" class="detail-row" style="display:none">
+          <td colspan="4">
+            <p class="no-vio">위반 의심 기사 없음</p>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+</div>
+<footer>네이버 뉴스 제휴 심사 및 운영 평가 규정 (2026.02.11) 기준 &nbsp;|&nbsp; 해지 기준: 24개월 누적 10점 이상</footer>
+<script>
+function toggleDetail(code) {
+  const el = document.getElementById('detail-' + code);
+  el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+</script>
+</body>
+</html>

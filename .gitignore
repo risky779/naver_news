@@ -1,0 +1,9 @@
+naver_monitor.db
+*.json
+*.txt
+*.log
+wide_scan_*.json
+monitoring_multi_*.json
+__pycache__/
+*.pyc
+.playwright/
