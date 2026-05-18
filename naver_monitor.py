@@ -235,6 +235,11 @@ C_EXEMPT_PATTERN = re.compile(
     r"공동\s*취재팀?|특별\s*취재팀?|풀단|Pool\s*Group",
     re.IGNORECASE
 )
+# AI 자동생성 기사 공시 문구 — 작성자=알고리즘임을 명시한 경우 C항 예외
+ROBONEWS_PATTERN = re.compile(
+    r"자동\s*생성\s*알고리즘|로봇\s*(기자|뉴스|저널리즘)|AI\s*(기자|뉴스)|알고리즘에\s*의해\s*(실시간으로\s*)?작성",
+    re.IGNORECASE
+)
 DEPT_PATTERN = re.compile(
     r"(온라인|디지털|편집|인터넷|모바일|소셜|뉴미디어).*(팀|부|국|센터)|"
     r"(보도|기획)팀|기자단|편집국|미디어팀|뉴스룸"
@@ -492,13 +497,14 @@ def analyze_rules(article: dict) -> dict:
     }
 
     # C. 바이라인 (1점) — 작성자 식별 정보 부재 (규정 제11조 C항)
-    # 예외: 속보 기사, 공동취재팀·특별취재팀·풀단은 적용 제외
-    is_breaking = bool(BREAKING_PATTERN.search(title))
-    c_absent    = not byline or len(byline) < 2
-    c_exempt    = bool(byline) and bool(C_EXEMPT_PATTERN.search(byline))
+    # 예외: 속보 기사, 공동취재팀·특별취재팀·풀단, AI 자동생성 공시 기사
+    is_breaking  = bool(BREAKING_PATTERN.search(title))
+    is_robonews  = bool(ROBONEWS_PATTERN.search(body))
+    c_absent     = not byline or len(byline) < 2
+    c_exempt     = bool(byline) and bool(C_EXEMPT_PATTERN.search(byline))
     has_personal = bool(byline) and bool(re.match(r"^[가-힣]{2,4}(\s|$)", byline))
-    c_dept      = bool(byline) and not c_exempt and not has_personal and bool(DEPT_PATTERN.search(byline))
-    c_bad       = (c_absent or c_dept) and not is_breaking
+    c_dept       = bool(byline) and not c_exempt and not has_personal and bool(DEPT_PATTERN.search(byline))
+    c_bad        = (c_absent or c_dept) and not is_breaking and not is_robonews
     results["C_byline_missing"] = {
         "violated": c_bad,
         "reason": ("기자명 없음" if c_absent
@@ -536,6 +542,9 @@ def analyze_rules(article: dict) -> dict:
     t_words       = [w for w in re.findall(r"[가-힣a-zA-Z]{2,}", title) if w.lower() not in L_STOPWORDS]
     title_wordset = set(t_words)
     lead_wordset  = set(re.findall(r"[가-힣a-zA-Z]{2,}", body[:BODY_LEAD_CHARS]))
+    # 본문 전체 최다 등장 상위 5단어도 주제어로 추가 (제목·리드에 없어도 핵심 주제 인식)
+    _body_freq = Counter(w for w in re.findall(r"[가-힣a-zA-Z]{2,}", body) if w.lower() not in L_STOPWORDS)
+    lead_wordset |= {w for w, _ in _body_freq.most_common(5)}
     # 양방향 prefix 매칭으로 조사 결합 처리
     # 정방향: 본문단어가 토픽단어+조사 (교사 → 교사는)
     # 역방향: 본문단어가 토픽단어의 어근 (검찰 ⊂ 검찰이/검찰에)
