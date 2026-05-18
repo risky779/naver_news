@@ -247,7 +247,20 @@ ROBONEWS_PATTERN = re.compile(
 )
 DEPT_PATTERN = re.compile(
     r"(온라인|디지털|편집|인터넷|모바일|소셜|뉴미디어).*(팀|부|국|센터)|"
-    r"(보도|기획)팀|기자단|편집국|미디어팀|뉴스룸"
+    r"(보도|기획)팀|기자단|편집국|미디어팀|뉴스룸|"
+    r"봇$|"                                        # 로봇/자동생성 바이라인 (예: C-APT봇)
+    r"^(KBS|YTN|MBC|SBS|JTBC|채널A|TV조선|MBN|C-APT)|"  # 방송사·기관명만 기재
+    r"(Herald|Times|News|Tribune)\s+[a-z]{3,}$"   # 매체명+이메일ID (예: Korea Herald khnews)
+)
+
+# 개인 기자명으로 인정되는 바이라인 패턴 (C항 판단용)
+# - 한국어 이름 2~5자 뒤에 공백·'('·'·'·'[' 또는 문자열 끝 (이메일 접미사 허용)
+# - 영문 한국식 이름: Byun Hye-jin, Lee Hyun-sang (하이픈 포함 Given-name)
+# - BY NAME 형식: 코리아헤럴드 스타일 (BY CHO MUN-GYU [...])
+_BYLINE_PERSONAL_RE = re.compile(
+    r"^[가-힣]{2,5}([\s(·\[]|$)|"
+    r"^[A-Z][a-z]+\s+[A-Z][a-z]+-[a-z]+|"
+    r"^BY\s+[A-Z]"
 )
 
 AI_GENERATION_WORDS   = ["ai가 작성", "ai가 생성", "인공지능이 작성"]
@@ -502,7 +515,20 @@ def analyze_rules(article: dict) -> dict:
     results = {}
 
     # B. 클릭베이트 (0.5점) — 과장·왜곡으로 이용자 오인 유발 (규정 제11조 B항)
+    # 케이스2: 정보 은폐형 표현 패턴 (알고보니, 반전 근황 등)
     hits = [(label, pat) for pat, label in CLICKBAIT_PATTERNS if re.search(pat, title)]
+    # 케이스1: 인기 검색어가 제목에 있으나 본문 내용과 무관 (DataLab 검증)
+    if body and len(body) >= 500:
+        _title_kws = [w for w in re.findall(r"[가-힣]{2,}", title)
+                      if w.lower() not in L_STOPWORDS]
+        if _title_kws:
+            _body_cnt = Counter(re.findall(r"[가-힣]{2,}", body))
+            _trends   = fetch_keyword_trends(_title_kws[:10])
+            _mismatch = [w for w in _title_kws
+                         if _trends.get(w, 0.0) >= TREND_THRESHOLD
+                         and _body_cnt.get(w, 0) <= 1]
+            if _mismatch:
+                hits.append((f"검색어-본문불일치({','.join(_mismatch[:3])})", ""))
     results["B_clickbait"] = {
         "violated": bool(hits),
         "reason": f"패턴 감지: {', '.join(l for l,_ in hits[:3])}" if hits else "정상",
@@ -515,8 +541,9 @@ def analyze_rules(article: dict) -> dict:
     is_robonews  = bool(ROBONEWS_PATTERN.search(body))
     c_absent     = not byline or len(byline) < 2
     c_exempt     = bool(byline) and bool(C_EXEMPT_PATTERN.search(byline))
-    has_personal = bool(byline) and bool(re.match(r"^[가-힣]{2,4}(\s|$)", byline))
-    c_dept       = bool(byline) and not c_exempt and not has_personal and bool(DEPT_PATTERN.search(byline))
+    # DEPT_PATTERN을 먼저 평가: 부서명/방송사명이 개인명 패턴보다 우선
+    c_dept       = bool(byline) and not c_exempt and bool(DEPT_PATTERN.search(byline))
+    has_personal = bool(byline) and not c_dept and bool(_BYLINE_PERSONAL_RE.search(byline))
     c_bad        = (c_absent or c_dept) and not is_breaking and not is_robonews
     results["C_byline_missing"] = {
         "violated": c_bad,
