@@ -244,19 +244,29 @@ AI_DISCLOSURE_WORDS   = ["ai 활용", "ai 생성", "인공지능 활용", "[ai]"
 # L. 규정: "연속·반복적으로 과도하게" — 단순 언급과 구별하기 위해 높은 임계값 적용
 KEYWORD_REPEAT_TITLE  = 3   # 제목 내 동일 단어 3회+ (2자 이상)
 KEYWORD_REPEAT_BODY   = 20  # 본문 내 동일 단어 20회+ (2자 이상)
-BODY_LEAD_CHARS       = 600 # 본문 첫 N자 내 등장 단어 = 주제어/인명으로 간주, L항 제외
+BODY_LEAD_CHARS       = 1000 # 본문 첫 N자 내 등장 단어 = 주제어/인명으로 간주, L항 제외
 
 # L항 불용어: 검색 조작 목적과 무관한 일반 서술어·조사·부사 제외
 L_STOPWORDS = {
-    # 한국어 불용어
+    # 한국어 불용어 — 서술어
     "있다", "없다", "하다", "되다", "이다", "아니다", "같다", "보다",
     "받다", "주다", "가다", "오다", "나다", "들다", "알다", "모르다",
     "말하다", "밝히다", "전하다", "설명하다", "강조하다", "지적하다",
+    # 구어체 서술어 활용형 (토론·방송 텍스트에서 반복)
+    "있어", "없어", "있죠", "없죠", "있는", "없는", "있고", "없고",
+    "하는", "하고", "했고", "했죠", "했어", "됩니다", "됩니까",
+    # 접속·전환 표현 (담화 표지어)
     "위해", "통해", "대해", "관해", "따라", "위한", "관련", "대한",
     "이후", "이전", "현재", "최근", "지난", "다음", "이번", "당시",
     "모든", "이런", "이러한", "그런", "그러한", "이같은", "이같이",
     "또한", "하지만", "그러나", "그리고", "따라서", "때문", "만큼",
     "경우", "상황", "문제", "내용", "방법", "방식", "계획", "예정",
+    # 구어체 접속·담화 표지 (방송·토론 텍스트에 빈번)
+    "그런데", "그래서", "그러면", "그러니", "그러니까", "그래도",
+    "지금", "아까", "이제", "아직", "벌써", "정말", "사실", "물론",
+    "어떤", "무슨", "어떻게", "왜냐", "왜냐면", "그냥", "이렇게",
+    "그렇게", "저렇게", "이렇게", "그리고는", "그러다", "결국", "다시",
+    "때문에", "때문", "위해서", "통해서", "대해서",
     # 영어 불용어 (영문 기사 대응 — 소문자로만 등록, 체크 시 .lower() 적용)
     "the", "and", "that", "this", "with", "for", "are", "was", "were",
     "has", "have", "had", "not", "but", "from", "they", "will", "been",
@@ -277,7 +287,7 @@ L_STOPWORDS = {
 
 # ── 네이버 DataLab 트렌드 검증 (L항) ────────────────────────────────────────
 TREND_CACHE_FILE  = "naver_trend_cache.json"
-TREND_THRESHOLD   = 1.0   # DataLab ratio 이 이상이면 실제 인기 검색어로 판단
+TREND_THRESHOLD   = 10.0  # DataLab ratio 이 이상이면 실제 인기 검색어로 판단 (100점 기준)
 
 _trend_cache: dict = {}   # {keyword: {"ratio": float, "date": "YYYY-MM-DD"}}
 
@@ -419,14 +429,16 @@ async def get_article_content(page, url: str) -> dict:
             if m:
                 byline = m.group(1)
                 break
-        # 마지막 3줄: 외부 기고 서명 "김만기 KAIST 미래전략대학원 교수"
+        # 마지막 3줄 + 첫 3줄: 외부 기고 서명 "김만기 KAIST 교수", "[신율 명지대 교수]"
         if not byline:
             EXPERT_TITLE = re.compile(
                 r"교수|원장|소장|대표|위원장|이사장|이사|연구원|연구위원|센터장|회장|처장|박사|전문위원|논설위원|칼럼니스트|장관|차관|청장|국장|부장|팀장|위원"
             )
-            for line in reversed(all_lines[-3:]):
-                if EXPERT_TITLE.search(line) and re.match(r"^[가-힣]{2,4}[\s·]", line):
-                    byline = line
+            # 대괄호 허용: "[신율 명지대 교수]" → ^[\[]?[가-힣]
+            _expert_re = re.compile(r"^\[?[가-힣]{2,4}[\s·]")
+            for line in list(reversed(all_lines[-3:])) + all_lines[:3]:
+                if EXPERT_TITLE.search(line) and _expert_re.match(line):
+                    byline = re.sub(r"[\[\]]", "", line).strip()
                     break
         # 첫 3줄: 영문 기고자명 ("Lee Hyun-sang") + 다음 줄에 "author" 언급
         if not byline and len(all_lines) >= 2:
