@@ -47,6 +47,13 @@ def reanalyze_from_body(conn: sqlite3.Connection) -> tuple[int, int]:
                     if m:
                         _personal = m.group(1)
                         break
+            # 녹취록 에디터: "대담 발췌: 이선 디지털뉴스팀 에디터" 형식
+            if not _personal:
+                for line in all_lines:
+                    m = re.search(r"(?:대담\s*발췌|글|정리|편집)\s*[:：]\s*([가-힣]{2,4})", line)
+                    if m:
+                        _personal = m.group(1)
+                        break
             # 마지막 5줄: "홍길동 기자"
             if not _personal:
                 for line in reversed(all_lines[-5:]):
