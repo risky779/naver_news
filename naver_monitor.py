@@ -467,10 +467,10 @@ async def get_article_content(page, url: str) -> dict:
     if (not byline or _byline_is_dept) and body:
         all_lines = [l.strip() for l in body.strip().splitlines() if l.strip()]
         _personal = ""
-        # 크레딧 블록: "기자 | 유투권" (YTN 등 방송사 형식)
+        # 크레딧 블록: "기자 | 유투권", "제작ㅣ윤현경" (YTN 등 방송사 형식)
         if not _personal:
             for line in all_lines:
-                m = re.search(r"기자\s*[\|｜]\s*([가-힣]{2,5})", line)
+                m = re.search(r"(?:기자|제작|촬영|편집|구성)\s*[\|｜ㅣ]\s*([가-힣]{2,5})", line)
                 if m:
                     _personal = m.group(1)
                     break
