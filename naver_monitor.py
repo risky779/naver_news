@@ -474,10 +474,24 @@ async def get_article_content(page, url: str) -> dict:
                 if m:
                     _personal = m.group(1)
                     break
-        # 크레딧 블록: "기자 | 유투권", "제작ㅣ윤현경" (YTN 등 방송사 형식)
+        # 마지막 5줄: "홍길동 기자", "MBN 문화부 이상주기자"
+        if not _personal:
+            for line in reversed(all_lines[-5:]):
+                m = re.search(r"([가-힣]{2,6})\s*(기자|특파원)$", line)
+                if m:
+                    _personal = m.group(1)
+                    break
+        # 마지막 5줄: "심가현 기자 gohyun@mbn.co.kr" (이름+직책+이메일) — 크레딧 블록보다 우선
+        if not _personal:
+            for line in reversed(all_lines[-5:]):
+                m = re.match(r"^([가-힣]{2,4}[\s가-힣A-Za-z·]+?)\s+\S+@\S+$", line)
+                if m:
+                    _personal = m.group(1).strip()
+                    break
+        # 크레딧 블록: "기자 | 유투권", "제작ㅣ윤현경", "영상취재 : 김다한 VJ"
         if not _personal:
             for line in all_lines:
-                m = re.search(r"(?:기자|제작|촬영|편집|구성)\s*[\|｜ㅣ]\s*([가-힣]{2,5})", line)
+                m = re.search(r"(?:기자|제작|촬영|편집|구성|영상취재|영상|취재)\s*[\|｜ㅣ:：]\s*([가-힣]{2,5})", line)
                 if m:
                     _personal = m.group(1)
                     break
@@ -487,20 +501,6 @@ async def get_article_content(page, url: str) -> dict:
                 m = re.search(r"(?:대담\s*발췌|글|정리|편집)\s*[:：]\s*([가-힣]{2,4})", line)
                 if m:
                     _personal = m.group(1)
-                    break
-        # 마지막 5줄: "홍길동 기자", "MBN 문화부 이상주기자"
-        if not _personal:
-            for line in reversed(all_lines[-5:]):
-                m = re.search(r"([가-힣]{2,6})\s*(기자|특파원)$", line)
-                if m:
-                    _personal = m.group(1)
-                    break
-        # 마지막 5줄: "김동기 청담 총괄셰프 paychey@naver.com" (이름+직책+이메일)
-        if not _personal:
-            for line in reversed(all_lines[-5:]):
-                m = re.match(r"^([가-힣]{2,4}[\s가-힣A-Za-z·]+?)\s+\S+@\S+$", line)
-                if m:
-                    _personal = m.group(1).strip()
                     break
         # 마지막 3줄 + 첫 3줄: 외부 기고 서명 "김만기 KAIST 교수", "[신율 명지대 교수]"
         if not _personal:
