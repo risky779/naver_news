@@ -40,6 +40,13 @@ def reanalyze_from_body(conn: sqlite3.Connection) -> tuple[int, int]:
         if (not byline or _byline_is_dept) and body:
             all_lines = [l.strip() for l in body.strip().splitlines() if l.strip()]
             _personal = ""
+            # 방송 리포트 서명: "YTN 김다연입니다" — 실제 취재 기자 우선 추출
+            if not _personal:
+                for line in all_lines:
+                    m = re.search(r"(?:YTN|KBS|MBC|SBS|JTBC|채널A|TV조선|MBN|연합뉴스TV)\s+([가-힣]{2,4})입니다", line)
+                    if m:
+                        _personal = m.group(1)
+                        break
             # 크레딧 블록: "기자 | 유투권", "제작ㅣ윤현경" (YTN 등 방송사 형식)
             if not _personal:
                 for line in all_lines:
