@@ -36,7 +36,7 @@ def load_deleted():
         SELECT press_name, title, byline, article_date,
                checks_json, score, violation_text
         FROM articles
-        WHERE is_deleted = 1 AND score > 0
+        WHERE is_deleted = 1
         ORDER BY score DESC, press_name
     """).fetchall()
     conn.close()
