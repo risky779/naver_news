@@ -30,6 +30,34 @@ ITEM_WEIGHTS = {
 }
 
 
+def load_deleted():
+    conn = sqlite3.connect(DB_FILE)
+    rows = conn.execute("""
+        SELECT press_name, title, byline, article_date,
+               checks_json, score, violation_text
+        FROM articles
+        WHERE is_deleted = 1 AND score > 0
+        ORDER BY score DESC, press_name
+    """).fetchall()
+    conn.close()
+    deleted = []
+    for r in rows:
+        try:
+            checks = json.loads(r[4] or "{}")
+        except Exception:
+            checks = {}
+        tags = [f"{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점" for k in checks]
+        deleted.append({
+            "press":   r[0] or "",
+            "title":   r[1] or "(제목 없음)",
+            "byline":  r[2] or "(없음)",
+            "date":    r[3] or "",
+            "score":   round(float(r[5] or 0), 1),
+            "tags":    tags,
+        })
+    return deleted
+
+
 def load_data():
     import json as _json
     conn = sqlite3.connect(DB_FILE)
@@ -109,7 +137,7 @@ def score_bar(score, max_score=20):
             f'<span class="bar-label">{score:.1f}점</span></div>')
 
 
-def make_html(rows, art_data, earliest=None):
+def make_html(rows, art_data, earliest=None, deleted=None):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     if earliest:
         from datetime import date as _date
@@ -164,7 +192,11 @@ def make_html(rows, art_data, earliest=None):
       </div>
     </div>"""
 
-    art_data_json = json.dumps(art_data, ensure_ascii=False)
+    art_data_json  = json.dumps(art_data, ensure_ascii=False)
+    deleted        = deleted or []
+    deleted_json   = json.dumps(deleted, ensure_ascii=False)
+    deleted_count  = len(deleted)
+    deleted_badge  = f'<span class="del-count">{deleted_count}건</span>' if deleted_count else ''
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
@@ -229,6 +261,24 @@ def make_html(rows, art_data, earliest=None):
   .pager button:disabled {{ opacity: 0.35; cursor: default; }}
   .pager .pager-ellipsis {{ padding: 4px 6px; font-size: 13px; color: var(--sub); line-height: 1.8; }}
   footer {{ text-align: center; color: var(--sub); font-size: 12px; padding: 32px 16px; }}
+  .del-section {{ background:#fff3f3; border:1px solid #f5c6cb; border-radius:8px; margin-bottom:24px; overflow:hidden; }}
+  .del-header {{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px;
+                 cursor:pointer; user-select:none; border-bottom:1px solid #f5c6cb; }}
+  .del-header h2 {{ font-size:14px; font-weight:700; color:#c0392b; }}
+  .del-count {{ background:#e74c3c; color:#fff; font-size:12px; font-weight:700;
+               padding:2px 8px; border-radius:10px; margin-left:8px; }}
+  .del-toggle {{ font-size:12px; color:#888; }}
+  .del-body {{ padding:12px 16px; display:none; }}
+  .del-item {{ border:1px solid #f5c6cb; border-radius:6px; padding:10px 12px;
+               margin-bottom:8px; background:#fff8f8; }}
+  .del-press {{ font-size:11px; color:#888; margin-bottom:3px; }}
+  .del-title {{ font-weight:600; font-size:13px; color:#555; text-decoration:line-through; margin-bottom:4px; }}
+  .del-meta {{ font-size:11px; color:var(--sub); margin-bottom:6px; }}
+  .del-pager {{ display:flex; gap:4px; justify-content:center; padding:8px 0 2px; flex-wrap:wrap; }}
+  .del-pager button {{ border:1px solid #f5c6cb; background:#fff; padding:3px 9px;
+    border-radius:4px; cursor:pointer; font-size:12px; }}
+  .del-pager button.active {{ background:#e74c3c; color:#fff; border-color:#e74c3c; }}
+  .del-pager button:disabled {{ opacity:.35; cursor:default; }}
   @media (max-width: 600px) {{
     .cards {{ gap: 8px; }} .card {{ min-width: 80px; padding: 12px; }} .card-num {{ font-size: 24px; }}
   }}
@@ -240,6 +290,16 @@ def make_html(rows, art_data, earliest=None):
   <div class="meta">마지막 업데이트: {now} &nbsp;|&nbsp; 누적 데이터 기간: {period_label} &nbsp;|&nbsp; 규정: 제14조 제10항 (24개월 누적 10점 이상 → 해지권고)</div>
 </header>
 <div class="container">
+  <div class="del-section" id="del-section" {'style="display:none"' if not deleted_count else ''}>
+    <div class="del-header" onclick="toggleDel()">
+      <h2>⚠ 삭제된 위반 의심 기사 {deleted_badge}</h2>
+      <span class="del-toggle" id="del-toggle-label">▼ 펼치기</span>
+    </div>
+    <div class="del-body" id="del-body">
+      <div id="del-container"></div>
+      <div class="del-pager" id="del-pager"></div>
+    </div>
+  </div>
   {summary_cards}
   <table>
     <thead>
@@ -257,9 +317,53 @@ def make_html(rows, art_data, earliest=None):
 </div>
 <footer>네이버 뉴스 제휴 심사 및 운영 평가 규정 (2026.02.11) 기준 &nbsp;|&nbsp; 해지 기준: 24개월 누적 10점 이상</footer>
 <script>
-const VDATA = {art_data_json};
+const VDATA    = {art_data_json};
+const DELETED  = {deleted_json};
 const PAGE_SIZE = 10;
-const curPage = {{}};
+const curPage  = {{}};
+let   delPage  = 1;
+const DEL_SIZE = 20;
+
+function toggleDel() {{
+  const body  = document.getElementById('del-body');
+  const label = document.getElementById('del-toggle-label');
+  const open  = body.style.display !== 'none';
+  body.style.display  = open ? 'none' : 'block';
+  label.textContent   = open ? '▼ 펼치기' : '▲ 접기';
+  if (!open && document.getElementById('del-container').innerHTML === '')
+    renderDel(1);
+}}
+
+function renderDel(page) {{
+  delPage = page;
+  const total = DELETED.length;
+  if (total === 0) return;
+  const totalPages = Math.max(1, Math.ceil(total / DEL_SIZE));
+  page = Math.min(Math.max(1, page), totalPages);
+  const slice = DELETED.slice((page - 1) * DEL_SIZE, page * DEL_SIZE);
+  const ctr = document.getElementById('del-container');
+  ctr.innerHTML =
+    `<div class="page-info" style="color:#888">${{page}}/${{totalPages}} 페이지 &nbsp;(총 ${{total}}건)</div>` +
+    slice.map(a => {{
+      const tags = a.tags.map(t => `<span class="vio-tag">${{esc(t)}}</span>`).join('');
+      return `<div class="del-item">
+        <div class="del-press">${{esc(a.press)}}</div>
+        <div class="del-title">${{esc(a.title)}}</div>
+        <div class="del-meta">기자: ${{esc(a.byline)}} &nbsp;|&nbsp; ${{esc(a.date)}} &nbsp;|&nbsp; 감점: ${{a.score.toFixed(1)}}점</div>
+        <div>${{tags}}</div>
+      </div>`;
+    }}).join('');
+  const pager = document.getElementById('del-pager');
+  if (totalPages <= 1) {{ pager.innerHTML = ''; return; }}
+  const btn = (p, label, disabled, active) =>
+    `<button onclick="renderDel(${{p}})" ${{disabled?'disabled':''}} class="${{active?'active':''}}">${{label}}</button>`;
+  let html = btn(page-1,'‹',page===1,false);
+  const pages = new Set([1,totalPages]);
+  for (let p=Math.max(1,page-2);p<=Math.min(totalPages,page+2);p++) pages.add(p);
+  Array.from(pages).sort((a,b)=>a-b).forEach(p => {{ html += btn(p,p,false,p===page); }});
+  html += btn(page+1,'›',page===totalPages,false);
+  pager.innerHTML = html;
+}}
 
 function esc(s) {{
   return String(s)
@@ -340,10 +444,11 @@ if __name__ == "__main__":
     import os
     os.makedirs(os.path.dirname(OUT_FILE), exist_ok=True)
     rows, art_data, earliest = load_data()
+    deleted = load_deleted()
     if not rows:
         print("DB에 데이터가 없습니다.")
     else:
-        html = make_html(rows, art_data, earliest)
+        html = make_html(rows, art_data, earliest, deleted)
         with open(OUT_FILE, "w", encoding="utf-8") as f:
             f.write(html)
         print(f"생성 완료: {OUT_FILE}  ({len(rows)}개 언론사)")
