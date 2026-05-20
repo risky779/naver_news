@@ -72,7 +72,7 @@
   .del-item { border:1px solid #f5c6cb; border-radius:6px; padding:10px 12px;
                margin-bottom:8px; background:#fff8f8; }
   .del-press { font-size:11px; color:#888; margin-bottom:3px; }
-  .del-title { font-weight:600; font-size:13px; color:#555; text-decoration:line-through; margin-bottom:4px; }
+  .del-title { font-weight:600; font-size:13px; color:#555; margin-bottom:4px; }
   .del-meta { font-size:11px; color:var(--sub); margin-bottom:6px; }
   .del-pager { display:flex; gap:4px; justify-content:center; padding:8px 0 2px; flex-wrap:wrap; }
   .del-pager button { border:1px solid #f5c6cb; background:#fff; padding:3px 9px;
@@ -90,7 +90,7 @@
 <body>
 <header>
   <h1>네이버 뉴스 품질 모니터링</h1>
-  <div class="meta">마지막 업데이트: 2026-05-20 13:39 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (4일) &nbsp;|&nbsp; 규정: 제14조 제10항 (24개월 누적 10점 이상 → 해지권고)</div>
+  <div class="meta">마지막 업데이트: 2026-05-20 14:05 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (4일) &nbsp;|&nbsp; 규정: 제14조 제10항 (24개월 누적 10점 이상 → 해지권고)</div>
 </header>
 <div class="container">
   <div class="del-section" id="del-section" >
@@ -1541,8 +1541,8 @@ function renderDel(page) {
       const tags = a.tags.map(t => `<span class="vio-tag">${esc(t)}</span>`).join('');
       const exclBadge = a.exclusive ? `<span class="excl-badge">단독</span>` : '';
       const titleHtml = a.url
-        ? `<a href="${esc(a.url)}" target="_blank" style="color:#c0392b;text-decoration:line-through">${esc(a.title)}</a>`
-        : `<span style="text-decoration:line-through">${esc(a.title)}</span>`;
+        ? `<a href="${esc(a.url)}" target="_blank" style="color:#c0392b">${esc(a.title)}</a>`
+        : `<span>${esc(a.title)}</span>`;
       return `<div class="del-item">
         <div class="del-press">${esc(a.press)}</div>
         <div class="del-title">${exclBadge}${titleHtml}</div>
