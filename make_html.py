@@ -34,10 +34,10 @@ def load_deleted():
     conn = sqlite3.connect(DB_FILE)
     rows = conn.execute("""
         SELECT press_name, title, byline, article_date,
-               checks_json, score, violation_text
+               checks_json, score, violation_text, url, is_exclusive, body
         FROM articles
         WHERE is_deleted = 1
-        ORDER BY score DESC, press_name
+        ORDER BY article_date DESC, score DESC
     """).fetchall()
     conn.close()
     deleted = []
@@ -48,12 +48,15 @@ def load_deleted():
             checks = {}
         tags = [f"{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점" for k in checks]
         deleted.append({
-            "press":   r[0] or "",
-            "title":   r[1] or "(제목 없음)",
-            "byline":  r[2] or "(없음)",
-            "date":    r[3] or "",
-            "score":   round(float(r[5] or 0), 1),
-            "tags":    tags,
+            "press":       r[0] or "",
+            "title":       r[1] or "(제목 없음)",
+            "byline":      r[2] or "(없음)",
+            "date":        r[3] or "",
+            "score":       round(float(r[5] or 0), 1),
+            "tags":        tags,
+            "url":         r[7] or "",
+            "exclusive":   bool(r[8]),
+            "body":        (r[9] or "")[:500],
         })
     return deleted
 
@@ -90,7 +93,7 @@ def load_data():
 
     raw_articles = conn.execute("""
         SELECT press_name, press_code, title, byline, article_date,
-               checks_json, score, violation_text, url
+               checks_json, score, violation_text, url, is_exclusive, ai_score
         FROM articles
         WHERE first_seen >= ? AND score > 0
         ORDER BY article_date DESC, score DESC
@@ -108,13 +111,15 @@ def load_data():
         tags = [f"{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점" for k in checks]
         vio_lines = [l.strip() for l in (a[7] or "").split("\n") if l.strip()]
         art_data.setdefault(code, []).append({
-            "title":   a[2] or "",
-            "byline":  a[3] or "(없음)",
-            "date":    a[4] or "",
-            "score":   round(float(a[6] or 0), 1),
-            "tags":    tags,
-            "vioText": vio_lines,
-            "url":     a[8] or "#",
+            "title":     a[2] or "",
+            "byline":    a[3] or "(없음)",
+            "date":      a[4] or "",
+            "score":     round(float(a[6] or 0), 1),
+            "tags":      tags,
+            "vioText":   vio_lines,
+            "url":       a[8] or "#",
+            "exclusive": bool(a[9]),
+            "aiScore":   round(float(a[10] or 0), 1) if a[10] is not None else None,
         })
 
     return rows, art_data, earliest
@@ -272,13 +277,25 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   .del-item {{ border:1px solid #f5c6cb; border-radius:6px; padding:10px 12px;
                margin-bottom:8px; background:#fff8f8; }}
   .del-press {{ font-size:11px; color:#888; margin-bottom:3px; }}
-  .del-title {{ font-weight:600; font-size:13px; color:#555; text-decoration:line-through; margin-bottom:4px; }}
+  .del-title {{ font-weight:600; font-size:13px; color:#555; margin-bottom:4px; }}
   .del-meta {{ font-size:11px; color:var(--sub); margin-bottom:6px; }}
+  .del-body {{ font-size:12px; color:#555; line-height:1.6; margin-top:8px; padding:8px 10px;
+               background:#fdf6f6; border-left:3px solid #f5c6cb; border-radius:3px;
+               white-space:pre-wrap; word-break:break-all; }}
   .del-pager {{ display:flex; gap:4px; justify-content:center; padding:8px 0 2px; flex-wrap:wrap; }}
   .del-pager button {{ border:1px solid #f5c6cb; background:#fff; padding:3px 9px;
     border-radius:4px; cursor:pointer; font-size:12px; }}
   .del-pager button.active {{ background:#e74c3c; color:#fff; border-color:#e74c3c; }}
   .del-pager button:disabled {{ opacity:.35; cursor:default; }}
+  .excl-badge {{ display:inline-block; font-size:10px; font-weight:700; padding:1px 5px;
+                 border-radius:3px; background:#d63031; color:#fff; margin-right:5px;
+                 vertical-align:middle; letter-spacing:0.5px; }}
+  .ai-badge-danger {{ display:inline-block; font-size:10px; font-weight:700; padding:1px 5px;
+                 border-radius:3px; background:#e17055; color:#fff; margin-right:5px;
+                 vertical-align:middle; letter-spacing:0.5px; }}
+  .ai-badge-caution {{ display:inline-block; font-size:10px; font-weight:700; padding:1px 5px;
+                 border-radius:3px; background:#fdcb6e; color:#333; margin-right:5px;
+                 vertical-align:middle; letter-spacing:0.5px; }}
   @media (max-width: 600px) {{
     .cards {{ gap: 8px; }} .card {{ min-width: 80px; padding: 12px; }} .card-num {{ font-size: 24px; }}
   }}
@@ -292,7 +309,7 @@ def make_html(rows, art_data, earliest=None, deleted=None):
 <div class="container">
   <div class="del-section" id="del-section" {'style="display:none"' if not deleted_count else ''}>
     <div class="del-header" onclick="toggleDel()">
-      <h2>⚠ 삭제된 위반 의심 기사 {deleted_badge}</h2>
+      <h2>⚠ 삭제 의심 기사 {deleted_badge}</h2>
       <span class="del-toggle" id="del-toggle-label">▼ 펼치기</span>
     </div>
     <div class="del-body" id="del-body">
@@ -322,7 +339,7 @@ const DELETED  = {deleted_json};
 const PAGE_SIZE = 10;
 const curPage  = {{}};
 let   delPage  = 1;
-const DEL_SIZE = 20;
+const DEL_SIZE = 10;
 
 function toggleDel() {{
   const body  = document.getElementById('del-body');
@@ -346,11 +363,19 @@ function renderDel(page) {{
     `<div class="page-info" style="color:#888">${{page}}/${{totalPages}} 페이지 &nbsp;(총 ${{total}}건)</div>` +
     slice.map(a => {{
       const tags = a.tags.map(t => `<span class="vio-tag">${{esc(t)}}</span>`).join('');
+      const exclBadge = a.exclusive ? `<span class="excl-badge">단독</span>` : '';
+      const aiBadge = a.aiScore >= 70 ? `<span class="ai-badge-danger">AI의심</span>`
+                    : a.aiScore >= 50 ? `<span class="ai-badge-caution">AI의심</span>` : '';
+      const titleHtml = a.url
+        ? `<a href="${{esc(a.url)}}" target="_blank" style="color:#c0392b">${{esc(a.title)}}</a>`
+        : `<span>${{esc(a.title)}}</span>`;
+      const bodyHtml = a.body ? `<div class="del-body">${{esc(a.body)}}</div>` : '';
       return `<div class="del-item">
         <div class="del-press">${{esc(a.press)}}</div>
-        <div class="del-title">${{esc(a.title)}}</div>
+        <div class="del-title">${{exclBadge}}${{aiBadge}}${{titleHtml}}</div>
         <div class="del-meta">기자: ${{esc(a.byline)}} &nbsp;|&nbsp; ${{esc(a.date)}} &nbsp;|&nbsp; 감점: ${{a.score.toFixed(1)}}점</div>
         <div>${{tags}}</div>
+        ${{bodyHtml}}
       </div>`;
     }}).join('');
   const pager = document.getElementById('del-pager');
@@ -402,8 +427,11 @@ function renderPage(code, page) {{
     slice.map(a => {{
       const tags    = a.tags.map(t => `<span class="vio-tag">${{esc(t)}}</span>`).join('');
       const viLines = a.vioText.map(l => `<div class="vio-text">${{esc(l)}}</div>`).join('');
+      const exclBadge2 = a.exclusive ? `<span class="excl-badge">단독</span>` : '';
+      const aiBadge2 = a.aiScore >= 70 ? `<span class="ai-badge-danger">AI의심</span>`
+                     : a.aiScore >= 50 ? `<span class="ai-badge-caution">AI의심</span>` : '';
       return `<div class="vio-item">
-        <div class="vio-title"><a href="${{esc(a.url)}}" target="_blank" style="color:inherit;text-decoration:none">${{esc(a.title)}}</a></div>
+        <div class="vio-title">${{exclBadge2}}${{aiBadge2}}<a href="${{esc(a.url)}}" target="_blank" style="color:inherit;text-decoration:none">${{esc(a.title)}}</a></div>
         <div class="vio-meta">기자: ${{esc(a.byline)}} &nbsp;|&nbsp; ${{esc(a.date)}} &nbsp;|&nbsp; 감점: ${{a.score.toFixed(1)}}점</div>
         <div>${{tags}}</div>${{viLines}}
       </div>`;
