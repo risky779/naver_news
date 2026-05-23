@@ -279,7 +279,7 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   .del-press {{ font-size:11px; color:#888; margin-bottom:3px; }}
   .del-title {{ font-weight:600; font-size:13px; color:#555; margin-bottom:4px; }}
   .del-meta {{ font-size:11px; color:var(--sub); margin-bottom:6px; }}
-  .del-body {{ font-size:12px; color:#555; line-height:1.6; margin-top:8px; padding:8px 10px;
+  .del-article-body {{ font-size:12px; color:#555; line-height:1.6; margin-top:8px; padding:8px 10px;
                background:#fdf6f6; border-left:3px solid #f5c6cb; border-radius:3px;
                white-space:pre-wrap; word-break:break-all; }}
   .del-pager {{ display:flex; gap:4px; justify-content:center; padding:8px 0 2px; flex-wrap:wrap; }}
@@ -369,7 +369,7 @@ function renderDel(page) {{
       const titleHtml = a.url
         ? `<a href="${{esc(a.url)}}" target="_blank" style="color:#c0392b">${{esc(a.title)}}</a>`
         : `<span>${{esc(a.title)}}</span>`;
-      const bodyHtml = a.body ? `<div class="del-body">${{esc(a.body)}}</div>` : '';
+      const bodyHtml = a.body ? `<div class="del-article-body">${{esc(a.body)}}</div>` : '';
       return `<div class="del-item">
         <div class="del-press">${{esc(a.press)}}</div>
         <div class="del-title">${{exclBadge}}${{aiBadge}}${{titleHtml}}</div>
