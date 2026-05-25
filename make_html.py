@@ -205,10 +205,11 @@ def make_html(rows, art_data, earliest=None, deleted=None):
     deleted_json   = json.dumps(deleted, ensure_ascii=False)
     deleted_count  = len(deleted)
     excl_count     = sum(1 for d in deleted if d.get("exclusive"))
+    type5_count    = sum(1 for d in deleted if d.get("deleteType") == 5)
     type1_count    = sum(1 for d in deleted if d.get("deleteType") == 1)
     type2_count    = sum(1 for d in deleted if d.get("deleteType") == 2)
-    type3_count    = sum(1 for d in deleted if d.get("deleteType") == 3)
     type4_count    = sum(1 for d in deleted if d.get("deleteType") == 4)
+    type3_count    = sum(1 for d in deleted if d.get("deleteType") in (3, None))
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
@@ -256,6 +257,7 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   .del-summary .card:hover {{ box-shadow: 0 3px 10px rgba(0,0,0,.12); }}
   .del-summary .card.active-filter {{ box-shadow: 0 0 0 2px #2f3542; }}
   .del-summary .card.all-card    {{ border-color: #576574; }}
+  .del-summary .card.type5-card  {{ border-color: #27ae60; }}
   .del-summary .card.type1-card  {{ border-color: #f39c12; }}
   .del-summary .card.type2-card  {{ border-color: var(--danger); }}
   .del-summary .card.type3-card  {{ border-color: #95a5a6; }}
@@ -268,6 +270,7 @@ def make_html(rows, art_data, earliest=None, deleted=None):
     display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px;
     border-radius: 3px; margin-right: 5px; vertical-align: middle; letter-spacing: 0.3px;
   }}
+  .type-badge.t5 {{ background: #e8f8ee; color: #1e8449; border: 1px solid #27ae60; }}
   .type-badge.t1 {{ background: #fff3cd; color: #856404; border: 1px solid #f39c12; }}
   .type-badge.t2 {{ background: #ffeaea; color: #c0392b; border: 1px solid var(--danger); }}
   .type-badge.t3 {{ background: #f0f0f0; color: #555; border: 1px solid #bbb; }}
@@ -370,13 +373,17 @@ def make_html(rows, art_data, earliest=None, deleted=None):
         <div class="card-num">{deleted_count}</div>
         <div class="card-label">전체</div>
       </div>
+      <div class="card type5-card" onclick="filterDel(5)">
+        <div class="card-num">{type5_count}</div>
+        <div class="card-label">링크 삭제<br><span style="font-size:10px;color:#1e8449">URL만 죽음, 기사 존재</span></div>
+      </div>
       <div class="card type1-card" onclick="filterDel(1)">
         <div class="card-num">{type1_count}</div>
         <div class="card-label">네이버만 삭제<br><span style="font-size:10px;color:#856404">언론사 원문 생존</span></div>
       </div>
       <div class="card type2-card" onclick="filterDel(2)">
         <div class="card-num">{type2_count}</div>
-        <div class="card-label">완전 삭제<br><span style="font-size:10px;color:#c0392b">Naver+언론사 모두</span></div>
+        <div class="card-label">완전 삭제<br><span style="font-size:10px;color:#c0392b">어디서도 없음</span></div>
       </div>
       <div class="card type4-card" onclick="filterDel(4)">
         <div class="card-num">{type4_count}</div>
@@ -384,7 +391,7 @@ def make_html(rows, art_data, earliest=None, deleted=None):
       </div>
       <div class="card type3-card" onclick="filterDel(3)">
         <div class="card-num">{type3_count}</div>
-        <div class="card-label">출처 미확인<br><span style="font-size:10px;color:#555">조회 중</span></div>
+        <div class="card-label">미분류<br><span style="font-size:10px;color:#555">검색 전</span></div>
       </div>
     </div>
     <div id="del-container"></div>
@@ -426,9 +433,10 @@ let   delFilter = 0;  // 0=전체, 1~4=타입별
 const DEL_SIZE = 10;
 
 const TYPE_BADGE = {{
+  5: '<span class="type-badge t5">링크삭제</span>',
   1: '<span class="type-badge t1">네이버만삭제</span>',
   2: '<span class="type-badge t2">완전삭제</span>',
-  3: '<span class="type-badge t3">출처미확인</span>',
+  3: '<span class="type-badge t3">미분류</span>',
   4: '<span class="type-badge t4">언론사삭제</span>',
 }};
 
@@ -436,7 +444,7 @@ function filterDel(type) {{
   delFilter = type;
   // 카드 active 표시
   document.querySelectorAll('.del-summary .card').forEach((c, i) => {{
-    const types = [0, 1, 2, 4, 3];  // 카드 순서와 매핑
+    const types = [0, 5, 1, 2, 4, 3];  // 카드 순서와 매핑
     c.classList.toggle('active-filter', types[i] === type);
   }});
   renderDel(1);

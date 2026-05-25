@@ -1,13 +1,18 @@
 """DB의 기사 URL을 비동기로 검사해 삭제 유형을 분류
 
 delete_type:
-  1 = 네이버 삭제 / 언론사 원문 생존  (Naver만 삭제)
+  1 = 네이버만 삭제 (Google 검색 시 언론사 원문 생존)
   2 = 완전 삭제 (Naver + 언론사 모두 없음)
-  3 = 네이버 삭제 / 출처 미확인 (source_url 미수집)
+  3 = 출처 미확인 (임시, resolve_unknown_by_search 실행 전)
   4 = 언론사 직접 삭제 (비제휴 언론사 URL 404)
+  5 = 링크 삭제 (URL만 죽었고 Naver 검색에서 기사 여전히 존재)
 """
-import asyncio, aiohttp, sqlite3, csv, sys, io, re
+import asyncio, aiohttp, sqlite3, csv, sys, io, re, os
+import xml.etree.ElementTree as ET
+from urllib.parse import quote
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv("C:/Users/admin/.env")
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
@@ -17,6 +22,7 @@ CONCURRENCY = 30
 TIMEOUT     = 10
 HEADERS     = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
+TAG_RE    = re.compile(r"<[^>]+>")
 ORIGIN_RE = re.compile(
     r'(?:href="(https?://[^"]+)"[^>]*class="media_end_head_origin_link"'
     r'|class="media_end_head_origin_link"[^>]*href="(https?://[^"]+)")'
@@ -177,19 +183,19 @@ async def main():
     conn.close()
 
     # 타입별 집계
-    by_type = {1: 0, 2: 0, 3: 0, 4: 0}
+    by_type = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
     for r in deleted:
         t = r[7]
         if t in by_type:
             by_type[t] += 1
 
     print(f"\n완료 — 삭제 의심: {len(deleted)}건 / 전체 {total}건")
-    print(f"  타입별: 네이버만={by_type[1]} / 완전삭제={by_type[2]} / 출처미확인={by_type[3]} / 언론사직접={by_type[4]}")
+    print(f"  링크삭제={by_type[5]} / 네이버만={by_type[1]} / 완전삭제={by_type[2]} / 미확인={by_type[3]} / 언론사직접={by_type[4]}")
 
+    type_labels = {1: "네이버만삭제", 2: "완전삭제", 3: "출처미확인", 4: "언론사삭제", 5: "링크삭제"}
     with open(OUT_FILE, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
         w.writerow(["url", "언론사", "제목", "기사날짜", "HTTP상태", "최종URL", "삭제유형"])
-        type_labels = {1: "네이버만삭제", 2: "완전삭제", 3: "출처미확인", 4: "언론사삭제"}
         for r in deleted:
             w.writerow([r[0], r[1], r[2], r[3], r[4], r[5], type_labels.get(r[7], "?")])
     print(f"저장: {OUT_FILE}")
@@ -199,6 +205,119 @@ async def main():
     print("\n언론사별 삭제 건수 (상위 15):")
     for press, cnt in by_press.most_common(15):
         print(f"  {press:15s} {cnt}건")
+
+    # 출처 미확인 기사 3단계 검색으로 재분류
+    await resolve_unknown_by_search()
+
+
+async def resolve_unknown_by_search():
+    """delete_type IS NULL or 3인 기사를 3단계 검색으로 재분류
+
+    1단계: 네이버 검색 → 있으면 type=5 (링크만 삭제)
+    2단계: Google RSS  → 있으면 type=1 (네이버만 삭제)
+    3단계: 없으면      → type=2 (완전 삭제)
+    """
+    client_id     = os.getenv("NAVER_SEARCH_CLIENT_ID")
+    client_secret = os.getenv("NAVER_SEARCH_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        print("\n네이버 검색 API 키 없음 — 재분류 건너뜀")
+        return
+
+    conn = sqlite3.connect(DB_FILE)
+    rows = conn.execute(
+        "SELECT url, press_name, title FROM articles "
+        "WHERE is_deleted=1 AND (delete_type IS NULL OR delete_type=3) "
+        "ORDER BY article_date DESC"
+    ).fetchall()
+    conn.close()
+
+    if not rows:
+        return
+
+    print(f"\n출처 미확인 {len(rows)}건 — 3단계 검색 재분류 중...")
+    counts = {5: 0, 1: 0, 2: 0}
+    conn = sqlite3.connect(DB_FILE)
+
+    async with aiohttp.ClientSession() as session:
+        for url, press, title in rows:
+            if not title:
+                conn.execute("UPDATE articles SET delete_type=2 WHERE url=?", (url,))
+                counts[2] += 1
+                continue
+
+            # 1단계: 네이버 검색
+            on_naver = await _search_naver(session, title, press, client_id, client_secret)
+            await asyncio.sleep(0.12)
+
+            if on_naver:
+                conn.execute("UPDATE articles SET delete_type=5 WHERE url=?", (url,))
+                counts[5] += 1
+                print(f"  [링크삭제] [{press}] {title[:45]}")
+                continue
+
+            # 2단계: Google News RSS
+            on_google = await _search_google_rss(session, title, press)
+            await asyncio.sleep(0.3)
+
+            if on_google:
+                conn.execute("UPDATE articles SET delete_type=1 WHERE url=?", (url,))
+                counts[1] += 1
+                print(f"  [네이버만] [{press}] {title[:45]}")
+            else:
+                conn.execute("UPDATE articles SET delete_type=2 WHERE url=?", (url,))
+                counts[2] += 1
+                print(f"  [완전삭제] [{press}] {title[:45]}")
+
+    conn.commit()
+    conn.close()
+    print(f"  → 링크삭제={counts[5]} / 네이버만={counts[1]} / 완전삭제={counts[2]}")
+
+
+async def _search_naver(session, title, press, client_id, client_secret) -> bool:
+    try:
+        async with session.get(
+            "https://openapi.naver.com/v1/search/news.json",
+            params={"query": title[:40], "display": 5, "sort": "date"},
+            headers={"X-Naver-Client-Id": client_id, "X-Naver-Client-Secret": client_secret},
+            timeout=aiohttp.ClientTimeout(total=6),
+        ) as resp:
+            if resp.status != 200:
+                return False
+            data = await resp.json()
+            t_clean = TAG_RE.sub("", title).strip()
+            for item in data.get("items", []):
+                i_title = TAG_RE.sub("", item.get("title", "")).strip()
+                i_link  = item.get("originallink", "") + item.get("link", "")
+                if t_clean[:15] in i_title or press in i_link:
+                    return True
+    except Exception:
+        pass
+    return False
+
+
+async def _search_google_rss(session, title, press) -> bool:
+    query = f'"{title[:30]}"'
+    url   = f"https://news.google.com/rss/search?q={quote(query)}&hl=ko&gl=KR&ceid=KR:ko"
+    try:
+        async with session.get(
+            url,
+            timeout=aiohttp.ClientTimeout(total=8),
+            headers={"User-Agent": "Mozilla/5.0"},
+            ssl=False,
+        ) as resp:
+            if resp.status != 200:
+                return False
+            text = await resp.text()
+            root = ET.fromstring(text)
+            t_clean = title[:20]
+            for item in root.iter("item"):
+                i_title = item.findtext("title") or ""
+                i_src   = item.findtext("source") or ""
+                if t_clean in i_title or press in i_src:
+                    return True
+    except Exception:
+        pass
+    return False
 
 
 if __name__ == "__main__":
