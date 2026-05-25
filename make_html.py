@@ -34,7 +34,8 @@ def load_deleted():
     conn = sqlite3.connect(DB_FILE)
     rows = conn.execute("""
         SELECT press_name, title, byline, article_date,
-               checks_json, score, violation_text, url, is_exclusive, body
+               checks_json, score, violation_text, url, is_exclusive, body,
+               COALESCE(delete_type, 3), source_url
         FROM articles
         WHERE is_deleted = 1
         ORDER BY article_date DESC, score DESC
@@ -57,6 +58,8 @@ def load_deleted():
             "url":         r[7] or "",
             "exclusive":   bool(r[8]),
             "body":        (r[9] or "")[:500],
+            "deleteType":  int(r[10] or 3),
+            "sourceUrl":   r[11] or "",
         })
     return deleted
 
@@ -202,6 +205,10 @@ def make_html(rows, art_data, earliest=None, deleted=None):
     deleted_json   = json.dumps(deleted, ensure_ascii=False)
     deleted_count  = len(deleted)
     excl_count     = sum(1 for d in deleted if d.get("exclusive"))
+    type1_count    = sum(1 for d in deleted if d.get("deleteType") == 1)
+    type2_count    = sum(1 for d in deleted if d.get("deleteType") == 2)
+    type3_count    = sum(1 for d in deleted if d.get("deleteType") == 3)
+    type4_count    = sum(1 for d in deleted if d.get("deleteType") == 4)
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
@@ -243,14 +250,28 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   .container {{ max-width: 1000px; margin: 0 auto; padding: 24px 16px; }}
   /* ── 삭제 의심 요약 카드 ── */
   .del-summary {{ display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }}
-  .del-summary .card {{ flex: 1; min-width: 120px; background: var(--card-bg); border-radius: 8px;
-           padding: 16px; text-align: center; border-top: 4px solid var(--border);
-           box-shadow: 0 1px 4px rgba(0,0,0,.06); }}
-  .del-summary .card.red-card   {{ border-color: var(--danger); }}
-  .del-summary .card.excl-card  {{ border-color: #d63031; }}
-  .del-summary .card.press-card {{ border-color: #576574; }}
-  .card-num {{ font-size: 32px; font-weight: 700; }}
-  .card-label {{ font-size: 12px; color: var(--sub); margin-top: 4px; }}
+  .del-summary .card {{ flex: 1; min-width: 100px; background: var(--card-bg); border-radius: 8px;
+           padding: 14px 10px; text-align: center; border-top: 4px solid var(--border);
+           box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer; transition: box-shadow .15s; }}
+  .del-summary .card:hover {{ box-shadow: 0 3px 10px rgba(0,0,0,.12); }}
+  .del-summary .card.active-filter {{ box-shadow: 0 0 0 2px #2f3542; }}
+  .del-summary .card.all-card    {{ border-color: #576574; }}
+  .del-summary .card.type1-card  {{ border-color: #f39c12; }}
+  .del-summary .card.type2-card  {{ border-color: var(--danger); }}
+  .del-summary .card.type3-card  {{ border-color: #95a5a6; }}
+  .del-summary .card.type4-card  {{ border-color: #8e44ad; }}
+  .del-summary .card.excl-card   {{ border-color: #d63031; }}
+  .card-num {{ font-size: 28px; font-weight: 700; }}
+  .card-label {{ font-size: 11px; color: var(--sub); margin-top: 4px; line-height: 1.4; }}
+  /* 타입 라벨 뱃지 */
+  .type-badge {{
+    display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px;
+    border-radius: 3px; margin-right: 5px; vertical-align: middle; letter-spacing: 0.3px;
+  }}
+  .type-badge.t1 {{ background: #fff3cd; color: #856404; border: 1px solid #f39c12; }}
+  .type-badge.t2 {{ background: #ffeaea; color: #c0392b; border: 1px solid var(--danger); }}
+  .type-badge.t3 {{ background: #f0f0f0; color: #555; border: 1px solid #bbb; }}
+  .type-badge.t4 {{ background: #f3e5ff; color: #6c3483; border: 1px solid #8e44ad; }}
   /* ── 삭제 의심 기사 목록 ── */
   .del-item {{ border: 1px solid var(--del-border); border-radius: 6px; padding: 12px 14px;
                margin-bottom: 10px; background: var(--del-bg); }}
@@ -345,13 +366,25 @@ def make_html(rows, art_data, earliest=None, deleted=None):
 <div id="tab-del" class="tab-panel active">
   <div class="container">
     <div class="del-summary">
-      <div class="card red-card">
+      <div class="card all-card active-filter" onclick="filterDel(0)">
         <div class="card-num">{deleted_count}</div>
-        <div class="card-label">삭제 의심 기사</div>
+        <div class="card-label">전체</div>
       </div>
-      <div class="card excl-card">
-        <div class="card-num">{excl_count}</div>
-        <div class="card-label">단독 기사 포함</div>
+      <div class="card type1-card" onclick="filterDel(1)">
+        <div class="card-num">{type1_count}</div>
+        <div class="card-label">네이버만 삭제<br><span style="font-size:10px;color:#856404">언론사 원문 생존</span></div>
+      </div>
+      <div class="card type2-card" onclick="filterDel(2)">
+        <div class="card-num">{type2_count}</div>
+        <div class="card-label">완전 삭제<br><span style="font-size:10px;color:#c0392b">Naver+언론사 모두</span></div>
+      </div>
+      <div class="card type4-card" onclick="filterDel(4)">
+        <div class="card-num">{type4_count}</div>
+        <div class="card-label">언론사 직접 삭제<br><span style="font-size:10px;color:#6c3483">비제휴 언론사</span></div>
+      </div>
+      <div class="card type3-card" onclick="filterDel(3)">
+        <div class="card-num">{type3_count}</div>
+        <div class="card-label">출처 미확인<br><span style="font-size:10px;color:#555">조회 중</span></div>
       </div>
     </div>
     <div id="del-container"></div>
@@ -389,7 +422,25 @@ const DELETED  = {deleted_json};
 const PAGE_SIZE = 10;
 const curPage  = {{}};
 let   delPage  = 1;
+let   delFilter = 0;  // 0=전체, 1~4=타입별
 const DEL_SIZE = 10;
+
+const TYPE_BADGE = {{
+  1: '<span class="type-badge t1">네이버만삭제</span>',
+  2: '<span class="type-badge t2">완전삭제</span>',
+  3: '<span class="type-badge t3">출처미확인</span>',
+  4: '<span class="type-badge t4">언론사삭제</span>',
+}};
+
+function filterDel(type) {{
+  delFilter = type;
+  // 카드 active 표시
+  document.querySelectorAll('.del-summary .card').forEach((c, i) => {{
+    const types = [0, 1, 2, 4, 3];  // 카드 순서와 매핑
+    c.classList.toggle('active-filter', types[i] === type);
+  }});
+  renderDel(1);
+}}
 
 function switchTab(name) {{
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -402,16 +453,17 @@ function switchTab(name) {{
 
 function renderDel(page) {{
   delPage = page;
-  const total = DELETED.length;
+  const filtered = delFilter === 0 ? DELETED : DELETED.filter(a => a.deleteType === delFilter);
+  const total = filtered.length;
   const ctr = document.getElementById('del-container');
   if (total === 0) {{
-    ctr.innerHTML = '<div class="no-del">삭제 의심 기사가 없습니다.</div>';
+    ctr.innerHTML = '<div class="no-del">해당 유형의 삭제 의심 기사가 없습니다.</div>';
     document.getElementById('del-pager').innerHTML = '';
     return;
   }}
   const totalPages = Math.max(1, Math.ceil(total / DEL_SIZE));
   page = Math.min(Math.max(1, page), totalPages);
-  const slice = DELETED.slice((page - 1) * DEL_SIZE, page * DEL_SIZE);
+  const slice = filtered.slice((page - 1) * DEL_SIZE, page * DEL_SIZE);
   ctr.innerHTML =
     `<div class="page-info">${{page}}/${{totalPages}} 페이지 &nbsp;(총 ${{total}}건)</div>` +
     slice.map(a => {{
@@ -419,13 +471,16 @@ function renderDel(page) {{
       const exclBadge = a.exclusive ? `<span class="excl-badge">단독</span>` : '';
       const aiBadge = a.aiScore >= 70 ? `<span class="ai-badge-danger">AI의심</span>`
                     : a.aiScore >= 50 ? `<span class="ai-badge-caution">AI의심</span>` : '';
+      const typeBadge = TYPE_BADGE[a.deleteType] || '';
       const titleHtml = a.url
         ? `<a href="${{esc(a.url)}}" target="_blank" style="color:#c0392b">${{esc(a.title)}}</a>`
         : `<span>${{esc(a.title)}}</span>`;
+      const sourceLink = a.sourceUrl
+        ? `<span style="font-size:11px;color:#888;margin-left:8px;"><a href="${{esc(a.sourceUrl)}}" target="_blank" style="color:#888">원문보기</a></span>` : '';
       const bodyHtml = a.body ? `<div class="del-article-body">${{esc(a.body)}}</div>` : '';
       return `<div class="del-item">
         <div class="del-press">${{esc(a.press)}}</div>
-        <div class="del-title">${{exclBadge}}${{aiBadge}}${{titleHtml}}</div>
+        <div class="del-title">${{typeBadge}}${{exclBadge}}${{aiBadge}}${{titleHtml}}${{sourceLink}}</div>
         <div class="del-meta">기자: ${{esc(a.byline)}} &nbsp;|&nbsp; ${{esc(a.date)}} &nbsp;|&nbsp; 감점: ${{a.score.toFixed(1)}}점</div>
         <div>${{tags}}</div>
         ${{bodyHtml}}

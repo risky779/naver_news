@@ -71,6 +71,10 @@ def init_db(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE articles ADD COLUMN violation_text TEXT")
     if "body" not in cols:
         conn.execute("ALTER TABLE articles ADD COLUMN body TEXT")
+    if "source_url" not in cols:
+        conn.execute("ALTER TABLE articles ADD COLUMN source_url TEXT")
+    if "delete_type" not in cols:
+        conn.execute("ALTER TABLE articles ADD COLUMN delete_type INTEGER")
     conn.commit()
 
 
@@ -105,13 +109,13 @@ def save_to_db(conn: sqlite3.Connection, url: str, art: dict,
     conn.execute("""
         INSERT OR IGNORE INTO articles
             (url, press_code, press_name, title, article_date, byline,
-             first_seen, checks_json, score, violation_text, body)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             first_seen, checks_json, score, violation_text, body, source_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (url, press_code, press_name,
           art.get("title", ""), art.get("date", ""), art.get("byline", ""),
           datetime.now().isoformat(),
           json.dumps(checks_to_save, ensure_ascii=False),
-          score, violation_text, art.get("body", "")))
+          score, violation_text, art.get("body", ""), art.get("source_url", "")))
     conn.commit()
 
 # 포토기사 제목 패턴 (L항목 예외 처리)
@@ -460,6 +464,13 @@ async def get_article_content(page, url: str) -> dict:
     category = await text(".media_end_categorize_item", ".Nnews_category")
     date_str = await text(".media_end_head_info_datestamp_time", "._article_date_time")
 
+    source_url = ""
+    origin_el = await page.query_selector(".media_end_head_origin_link")
+    if origin_el:
+        href = await origin_el.get_attribute("href")
+        if href and "naver.com" not in href:
+            source_url = href
+
     byline = re.sub(r"\s*(기자|특파원|기자\s*=).*|@\S+|\s+", " ", byline_r).strip()
 
     # 바이라인 태그 없을 때 본문 앞/뒤에서 폴백 추출
@@ -520,7 +531,7 @@ async def get_article_content(page, url: str) -> dict:
             byline = _personal
 
     return {"title": title, "body": body, "byline": byline,
-            "category": category, "date": date_str}
+            "category": category, "date": date_str, "source_url": source_url}
 
 
 def extract_context(text: str, keyword: str, window: int = 60) -> str:
