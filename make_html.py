@@ -201,26 +201,72 @@ def make_html(rows, art_data, earliest=None, deleted=None):
     deleted        = deleted or []
     deleted_json   = json.dumps(deleted, ensure_ascii=False)
     deleted_count  = len(deleted)
-    deleted_badge  = f'<span class="del-count">{deleted_count}건</span>' if deleted_count else ''
+    excl_count     = sum(1 for d in deleted if d.get("exclusive"))
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>네이버 뉴스 품질 모니터링</title>
+<title>네이버 뉴스 모니터링</title>
 <style>
   :root {{
     --danger: #e74c3c; --warning: #f39c12; --ok: #27ae60;
     --bg: #f5f6fa; --card-bg: #fff; --border: #dfe4ea;
     --text: #2f3542; --sub: #747d8c;
+    --del-red: #c0392b; --del-bg: #fff8f8; --del-border: #f5c6cb;
   }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{ font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }}
-  header {{ background: #2f3542; color: #fff; padding: 20px 32px; }}
+  header {{ background: #2f3542; color: #fff; padding: 16px 32px; }}
   header h1 {{ font-size: 20px; font-weight: 700; }}
   header .meta {{ font-size: 12px; color: #a4b0be; margin-top: 4px; }}
+  /* ── 탭 네비게이션 ── */
+  .tab-nav {{ display: flex; background: #fff; border-bottom: 2px solid var(--border); }}
+  .tab-btn {{
+    flex: 1; padding: 14px 20px; font-size: 15px; font-weight: 700;
+    border: none; background: transparent; cursor: pointer; color: var(--sub);
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+  }}
+  .tab-btn:hover {{ color: var(--text); }}
+  .tab-btn.active {{ color: var(--del-red); border-bottom-color: var(--del-red); }}
+  .tab-btn.active.quality {{ color: #2f3542; border-bottom-color: #2f3542; }}
+  .tab-badge {{
+    display: inline-block; font-size: 12px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px; margin-left: 8px;
+    background: var(--danger); color: #fff; vertical-align: middle;
+  }}
+  .tab-panel {{ display: none; }}
+  .tab-panel.active {{ display: block; }}
+  /* ── 공통 컨테이너 ── */
   .container {{ max-width: 1000px; margin: 0 auto; padding: 24px 16px; }}
+  /* ── 삭제 의심 요약 카드 ── */
+  .del-summary {{ display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }}
+  .del-summary .card {{ flex: 1; min-width: 120px; background: var(--card-bg); border-radius: 8px;
+           padding: 16px; text-align: center; border-top: 4px solid var(--border);
+           box-shadow: 0 1px 4px rgba(0,0,0,.06); }}
+  .del-summary .card.red-card   {{ border-color: var(--danger); }}
+  .del-summary .card.excl-card  {{ border-color: #d63031; }}
+  .del-summary .card.press-card {{ border-color: #576574; }}
+  .card-num {{ font-size: 32px; font-weight: 700; }}
+  .card-label {{ font-size: 12px; color: var(--sub); margin-top: 4px; }}
+  /* ── 삭제 의심 기사 목록 ── */
+  .del-item {{ border: 1px solid var(--del-border); border-radius: 6px; padding: 12px 14px;
+               margin-bottom: 10px; background: var(--del-bg); }}
+  .del-press {{ font-size: 11px; color: #888; margin-bottom: 3px; }}
+  .del-title {{ font-weight: 600; font-size: 14px; color: #555; margin-bottom: 5px; line-height: 1.5; }}
+  .del-meta {{ font-size: 11px; color: var(--sub); margin-bottom: 6px; }}
+  .del-article-body {{ font-size: 12px; color: #555; line-height: 1.6; margin-top: 8px; padding: 8px 10px;
+               background: #fdf6f6; border-left: 3px solid var(--del-border); border-radius: 3px;
+               white-space: pre-wrap; word-break: break-all; }}
+  .del-pager {{ display: flex; gap: 4px; justify-content: center; padding: 10px 0 4px; flex-wrap: wrap; }}
+  .del-pager button {{ border: 1px solid var(--del-border); background: #fff; padding: 4px 10px;
+    border-radius: 4px; cursor: pointer; font-size: 12px; }}
+  .del-pager button.active {{ background: var(--danger); color: #fff; border-color: var(--danger); }}
+  .del-pager button:disabled {{ opacity: .35; cursor: default; }}
+  .no-del {{ text-align: center; padding: 40px 0; color: var(--sub); font-size: 14px; }}
+  /* ── 품질 모니터링 ── */
   .cards {{ display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }}
   .card {{ flex: 1; min-width: 120px; background: var(--card-bg); border-radius: 8px;
            padding: 16px; text-align: center; border-top: 4px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.06); }}
@@ -228,8 +274,6 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   .warning-card {{ border-color: var(--warning); }}
   .ok-card {{ border-color: var(--ok); }}
   .total-card {{ border-color: #576574; }}
-  .card-num {{ font-size: 32px; font-weight: 700; }}
-  .card-label {{ font-size: 12px; color: var(--sub); margin-top: 4px; }}
   table {{ width: 100%; border-collapse: collapse; background: var(--card-bg);
            border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }}
   th {{ background: #f1f2f6; padding: 10px 14px; text-align: left; font-size: 12px; color: var(--sub); border-bottom: 1px solid var(--border); }}
@@ -265,28 +309,7 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   .pager button.active {{ background: #2f3542; color: #fff; border-color: #2f3542; }}
   .pager button:disabled {{ opacity: 0.35; cursor: default; }}
   .pager .pager-ellipsis {{ padding: 4px 6px; font-size: 13px; color: var(--sub); line-height: 1.8; }}
-  footer {{ text-align: center; color: var(--sub); font-size: 12px; padding: 32px 16px; }}
-  .del-section {{ background:#fff3f3; border:1px solid #f5c6cb; border-radius:8px; margin-bottom:24px; overflow:hidden; }}
-  .del-header {{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px;
-                 cursor:pointer; user-select:none; border-bottom:1px solid #f5c6cb; }}
-  .del-header h2 {{ font-size:14px; font-weight:700; color:#c0392b; }}
-  .del-count {{ background:#e74c3c; color:#fff; font-size:12px; font-weight:700;
-               padding:2px 8px; border-radius:10px; margin-left:8px; }}
-  .del-toggle {{ font-size:12px; color:#888; }}
-  .del-body {{ padding:12px 16px; display:none; }}
-  .del-item {{ border:1px solid #f5c6cb; border-radius:6px; padding:10px 12px;
-               margin-bottom:8px; background:#fff8f8; }}
-  .del-press {{ font-size:11px; color:#888; margin-bottom:3px; }}
-  .del-title {{ font-weight:600; font-size:13px; color:#555; margin-bottom:4px; }}
-  .del-meta {{ font-size:11px; color:var(--sub); margin-bottom:6px; }}
-  .del-article-body {{ font-size:12px; color:#555; line-height:1.6; margin-top:8px; padding:8px 10px;
-               background:#fdf6f6; border-left:3px solid #f5c6cb; border-radius:3px;
-               white-space:pre-wrap; word-break:break-all; }}
-  .del-pager {{ display:flex; gap:4px; justify-content:center; padding:8px 0 2px; flex-wrap:wrap; }}
-  .del-pager button {{ border:1px solid #f5c6cb; background:#fff; padding:3px 9px;
-    border-radius:4px; cursor:pointer; font-size:12px; }}
-  .del-pager button.active {{ background:#e74c3c; color:#fff; border-color:#e74c3c; }}
-  .del-pager button:disabled {{ opacity:.35; cursor:default; }}
+  footer {{ text-align: center; color: var(--sub); font-size: 12px; padding: 28px 16px; }}
   .excl-badge {{ display:inline-block; font-size:10px; font-weight:700; padding:1px 5px;
                  border-radius:3px; background:#d63031; color:#fff; margin-right:5px;
                  vertical-align:middle; letter-spacing:0.5px; }}
@@ -297,42 +320,69 @@ def make_html(rows, art_data, earliest=None, deleted=None):
                  border-radius:3px; background:#fdcb6e; color:#333; margin-right:5px;
                  vertical-align:middle; letter-spacing:0.5px; }}
   @media (max-width: 600px) {{
-    .cards {{ gap: 8px; }} .card {{ min-width: 80px; padding: 12px; }} .card-num {{ font-size: 24px; }}
+    .tab-btn {{ font-size: 13px; padding: 12px 10px; }}
+    .cards, .del-summary {{ gap: 8px; }}
+    .card, .del-summary .card {{ min-width: 80px; padding: 12px; }}
+    .card-num {{ font-size: 24px; }}
   }}
 </style>
 </head>
 <body>
 <header>
-  <h1>네이버 뉴스 품질 모니터링</h1>
-  <div class="meta">마지막 업데이트: {now} &nbsp;|&nbsp; 누적 데이터 기간: {period_label} &nbsp;|&nbsp; 규정: 제14조 제10항 (24개월 누적 10점 이상 → 해지권고)</div>
+  <h1>네이버 뉴스 모니터링</h1>
+  <div class="meta">마지막 업데이트: {now} &nbsp;|&nbsp; 누적 데이터 기간: {period_label}</div>
 </header>
-<div class="container">
-  <div class="del-section" id="del-section" {'style="display:none"' if not deleted_count else ''}>
-    <div class="del-header" onclick="toggleDel()">
-      <h2>⚠ 삭제 의심 기사 {deleted_badge}</h2>
-      <span class="del-toggle" id="del-toggle-label">▼ 펼치기</span>
-    </div>
-    <div class="del-body" id="del-body">
-      <div id="del-container"></div>
-      <div class="del-pager" id="del-pager"></div>
-    </div>
-  </div>
-  {summary_cards}
-  <table>
-    <thead>
-      <tr>
-        <th>순위</th>
-        <th>언론사</th>
-        <th>24개월 누적 점수</th>
-        <th>분석기사</th>
-      </tr>
-    </thead>
-    <tbody>
-      {rank_rows}
-    </tbody>
-  </table>
+<div class="tab-nav">
+  <button id="tab-btn-del" class="tab-btn active" onclick="switchTab('del')">
+    ⚠ 삭제 의심 기사<span class="tab-badge" id="del-tab-badge">{deleted_count}</span>
+  </button>
+  <button id="tab-btn-quality" class="tab-btn quality" onclick="switchTab('quality')">
+    📊 뉴스 품질 모니터링
+  </button>
 </div>
-<footer>네이버 뉴스 제휴 심사 및 운영 평가 규정 (2026.02.11) 기준 &nbsp;|&nbsp; 해지 기준: 24개월 누적 10점 이상</footer>
+
+<!-- 탭 1: 삭제 의심 기사 -->
+<div id="tab-del" class="tab-panel active">
+  <div class="container">
+    <div class="del-summary">
+      <div class="card red-card">
+        <div class="card-num">{deleted_count}</div>
+        <div class="card-label">삭제 의심 기사</div>
+      </div>
+      <div class="card excl-card">
+        <div class="card-num">{excl_count}</div>
+        <div class="card-label">단독 기사 포함</div>
+      </div>
+    </div>
+    <div id="del-container"></div>
+    <div class="del-pager" id="del-pager"></div>
+  </div>
+</div>
+
+<!-- 탭 2: 뉴스 품질 모니터링 -->
+<div id="tab-quality" class="tab-panel">
+  <div class="container">
+    <div class="meta" style="font-size:12px;color:var(--sub);margin-bottom:16px;padding-top:4px;">
+      규정: 제14조 제10항 &nbsp;|&nbsp; 해지 기준: 24개월 누적 10점 이상
+    </div>
+    {summary_cards}
+    <table>
+      <thead>
+        <tr>
+          <th>순위</th>
+          <th>언론사</th>
+          <th>24개월 누적 점수</th>
+          <th>분석기사</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rank_rows}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer>네이버 뉴스 제휴 심사 및 운영 평가 규정 (2026.02.11) 기준</footer>
 <script>
 const VDATA    = {art_data_json};
 const DELETED  = {deleted_json};
@@ -341,26 +391,29 @@ const curPage  = {{}};
 let   delPage  = 1;
 const DEL_SIZE = 10;
 
-function toggleDel() {{
-  const body  = document.getElementById('del-body');
-  const label = document.getElementById('del-toggle-label');
-  const open  = body.style.display !== 'none';
-  body.style.display  = open ? 'none' : 'block';
-  label.textContent   = open ? '▼ 펼치기' : '▲ 접기';
-  if (!open && document.getElementById('del-container').innerHTML === '')
+function switchTab(name) {{
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tab-btn-' + name).classList.add('active');
+  if (name === 'del' && document.getElementById('del-container').innerHTML === '')
     renderDel(1);
 }}
 
 function renderDel(page) {{
   delPage = page;
   const total = DELETED.length;
-  if (total === 0) return;
+  const ctr = document.getElementById('del-container');
+  if (total === 0) {{
+    ctr.innerHTML = '<div class="no-del">삭제 의심 기사가 없습니다.</div>';
+    document.getElementById('del-pager').innerHTML = '';
+    return;
+  }}
   const totalPages = Math.max(1, Math.ceil(total / DEL_SIZE));
   page = Math.min(Math.max(1, page), totalPages);
   const slice = DELETED.slice((page - 1) * DEL_SIZE, page * DEL_SIZE);
-  const ctr = document.getElementById('del-container');
   ctr.innerHTML =
-    `<div class="page-info" style="color:#888">${{page}}/${{totalPages}} 페이지 &nbsp;(총 ${{total}}건)</div>` +
+    `<div class="page-info">${{page}}/${{totalPages}} 페이지 &nbsp;(총 ${{total}}건)</div>` +
     slice.map(a => {{
       const tags = a.tags.map(t => `<span class="vio-tag">${{esc(t)}}</span>`).join('');
       const exclBadge = a.exclusive ? `<span class="excl-badge">단독</span>` : '';
@@ -463,6 +516,9 @@ function buildPager(code, cur, total) {{
   html += btn(cur + 1, '다음 ›', cur === total, false);
   return html;
 }}
+
+// 페이지 로드 시 삭제 의심 기사 탭 초기 렌더링
+renderDel(1);
 </script>
 </body>
 </html>"""

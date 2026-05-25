@@ -578,7 +578,8 @@ def analyze_rules(article: dict) -> dict:
         if _tm and bool(_BYLINE_PERSONAL_RE.search(_tm.group(1))):
             has_personal = True
     c_dept       = bool(byline) and not c_exempt and not has_personal and bool(DEPT_PATTERN.search(byline))
-    c_bad        = (c_absent or c_dept) and not is_breaking and not is_robonews and not is_broadcast
+    is_personnel_obituary = bool(re.search(r'인사[^말]|부고|임명|선임|취임|퇴임|영면|별세|타계|사망|\[날씨\]', title or ""))
+    c_bad        = (c_absent or c_dept) and not is_breaking and not is_robonews and not is_broadcast and not is_personnel_obituary
     results["C_byline_missing"] = {
         "violated": c_bad,
         "reason": ("기자명 없음" if c_absent
