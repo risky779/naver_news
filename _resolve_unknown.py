@@ -1,13 +1,15 @@
 """출처 미확인(delete_type IS NULL or 3) 기사를 3단계로 재분류
 
 단계:
-  1. 네이버 검색 → 나오면 delete_type=5 (링크 삭제 — URL만 죽고 Naver에 존재)
+  1. 네이버 검색 → 같은 언론사 기사 나오면 delete_type=5 (링크 삭제 — URL만 죽고 Naver에 존재)
   2. 언론사 도메인 파악 후 Google RSS site:도메인 검색 → 나오면 delete_type=1 (네이버만 삭제)
   3. 둘 다 없으면 delete_type=2 (완전 삭제)
 
 도메인 파악 순서:
   ① DB의 같은 press_code 기사에서 source_url 추출
   ② 없으면 Naver 검색 API로 해당 언론사 최근 기사 originallink에서 추출
+
+주의: 1단계 Naver 검색 결과는 domain으로 출처 검증 — 다른 언론사 동명 기사 오탐 방지
 """
 import asyncio, aiohttp, sqlite3, re, sys, io, os
 import xml.etree.ElementTree as ET
@@ -17,8 +19,16 @@ from dotenv import load_dotenv
 load_dotenv("C:/Users/admin/.env")
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-DB_FILE = "C:/Users/admin/naver_monitor.db"
-TAG_RE  = re.compile(r"<[^>]+>")
+DB_FILE   = "C:/Users/admin/naver_monitor.db"
+TAG_RE    = re.compile(r"<[^>]+>")
+QUOTE_RE  = re.compile(r'["""\'\'…·]')
+
+
+def clean_title(title: str, max_len: int = 25) -> str:
+    """검색 쿼리용: 따옴표·특수문자 제거 후 공백 정리"""
+    t = QUOTE_RE.sub("", title)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t[:max_len]
 
 
 def get_domain_from_db(conn, press_code: str) -> str:
@@ -35,47 +45,68 @@ def get_domain_from_db(conn, press_code: str) -> str:
 
 
 async def get_domain_from_naver(session, press_name: str, client_id: str, client_secret: str) -> str:
-    """Naver 검색으로 해당 언론사 최근 기사 originallink에서 도메인 추출"""
+    """Naver 검색으로 해당 언론사 최근 기사 originallink에서 도메인 추출.
+
+    빈도수가 가장 높은 도메인을 선택해 다른 언론사 오탐 방지.
+    """
     try:
         async with session.get(
             "https://openapi.naver.com/v1/search/news.json",
-            params={"query": press_name, "display": 10, "sort": "date"},
+            params={"query": press_name, "display": 20, "sort": "date"},
             headers={"X-Naver-Client-Id": client_id, "X-Naver-Client-Secret": client_secret},
             timeout=aiohttp.ClientTimeout(total=6),
         ) as resp:
             if resp.status != 200:
                 return ""
             data = await resp.json()
+            freq: dict[str, int] = {}
             for item in data.get("items", []):
                 orig = item.get("originallink", "")
                 if not orig or not orig.startswith("http"):
                     continue
                 netloc = urlparse(orig).netloc
                 if netloc and "naver.com" not in netloc:
-                    return netloc
+                    freq[netloc] = freq.get(netloc, 0) + 1
+            if freq:
+                return max(freq, key=freq.get)
     except Exception:
         pass
     return ""
 
 
-async def search_naver(session, title: str, press: str, client_id: str, client_secret: str) -> bool:
-    """제목으로 네이버 뉴스 검색 — 있으면 True"""
+async def search_naver(session, title: str, press: str, domain: str,
+                       client_id: str, client_secret: str) -> bool:
+    """네이버 뉴스 검색 — 같은 언론사 기사 있으면 True
+
+    domain이 있으면 originallink 도메인으로 출처 검증.
+    없으면 press 이름으로 폴백 (단, 제목 매치만으론 True 반환 안 함).
+    """
     try:
+        q = clean_title(title, 40)
         async with session.get(
             "https://openapi.naver.com/v1/search/news.json",
-            params={"query": title[:40], "display": 5, "sort": "date"},
+            params={"query": q, "display": 10, "sort": "date"},
             headers={"X-Naver-Client-Id": client_id, "X-Naver-Client-Secret": client_secret},
             timeout=aiohttp.ClientTimeout(total=6),
         ) as resp:
             if resp.status != 200:
                 return False
             data = await resp.json()
-            t_clean = TAG_RE.sub("", title).strip()
+            t_clean = clean_title(title, 15)
             for item in data.get("items", []):
                 i_title = TAG_RE.sub("", item.get("title", "")).strip()
-                i_link  = item.get("originallink", "") + item.get("link", "")
-                if t_clean[:15] in i_title or press in i_link:
-                    return True
+                i_orig  = item.get("originallink", "")
+                i_link  = item.get("link", "")
+                if t_clean not in i_title:
+                    continue
+                # 제목 매치 → 출처도 검증
+                if domain:
+                    if domain in i_orig:
+                        return True
+                else:
+                    # 도메인 없을 때: press 이름이 link에 포함되면 인정
+                    if press in i_orig or press in i_link:
+                        return True
     except Exception:
         pass
     return False
@@ -83,7 +114,8 @@ async def search_naver(session, title: str, press: str, client_id: str, client_s
 
 async def search_outlet_direct(session, title: str, domain: str) -> bool:
     """Google RSS로 site:도메인 검색 — 언론사 직접 확인"""
-    query = f'site:{domain} "{title[:30]}"'
+    q     = clean_title(title, 25)
+    query = f"site:{domain} {q}"
     url   = f"https://news.google.com/rss/search?q={quote(query)}&hl=ko&gl=KR&ceid=KR:ko"
     try:
         async with session.get(
@@ -96,7 +128,7 @@ async def search_outlet_direct(session, title: str, domain: str) -> bool:
                 return False
             text = await resp.text()
             root = ET.fromstring(text)
-            t_clean = title[:15]
+            t_clean = clean_title(title, 15)
             for item in root.iter("item"):
                 i_title = item.findtext("title") or ""
                 i_link  = item.findtext("link") or ""
@@ -109,7 +141,8 @@ async def search_outlet_direct(session, title: str, domain: str) -> bool:
 
 async def search_google_rss_fallback(session, title: str, press: str) -> bool:
     """도메인 파악 실패 시 제목만으로 Google RSS 검색"""
-    query = f'"{title[:30]}"'
+    q     = clean_title(title, 30)
+    query = f'"{q}"'
     url   = f"https://news.google.com/rss/search?q={quote(query)}&hl=ko&gl=KR&ceid=KR:ko"
     try:
         async with session.get(
@@ -122,7 +155,7 @@ async def search_google_rss_fallback(session, title: str, press: str) -> bool:
                 return False
             text = await resp.text()
             root = ET.fromstring(text)
-            t_clean = title[:20]
+            t_clean = clean_title(title, 20)
             for item in root.iter("item"):
                 i_title = item.findtext("title") or ""
                 i_src   = item.findtext("source") or ""
@@ -153,9 +186,9 @@ async def main():
         return
 
     print(f"재분류 대상 {len(rows)}건 — 3단계 검색 시작...")
-    print(f"  1단계: 네이버 검색      → 링크삭제(5)")
-    print(f"  2단계: 언론사 직접 확인 → 네이버만삭제(1)")
-    print(f"  3단계: 없으면          → 완전삭제(2)\n")
+    print(f"  1단계: 네이버 검색 (도메인 검증 포함)  → 링크삭제(5)")
+    print(f"  2단계: 언론사 직접 확인               → 네이버만삭제(1)")
+    print(f"  3단계: 없으면                         → 완전삭제(2)\n")
 
     # press_code별 도메인 캐시
     domain_cache: dict[str, str] = {}
@@ -169,18 +202,7 @@ async def main():
                 counts[2] += 1
                 continue
 
-            # ── 1단계: 네이버 검색 ──────────────────────────────────────────
-            on_naver = await search_naver(session, title, press, client_id, client_secret)
-            await asyncio.sleep(0.12)
-
-            if on_naver:
-                conn.execute("UPDATE articles SET delete_type=5 WHERE url=?", (url,))
-                counts[5] += 1
-                print(f"  [링크삭제]  [{press}] {title[:45]}")
-                continue
-
-            # ── 2단계: 언론사 도메인 파악 후 직접 확인 ──────────────────────
-            # 도메인 캐시 확인
+            # ── 도메인 파악 (1단계 Naver 검증에도 필요하므로 먼저 수행) ─────────
             if press_code not in domain_cache:
                 domain = get_domain_from_db(conn, press_code)
                 if not domain:
@@ -190,6 +212,17 @@ async def main():
 
             domain = domain_cache[press_code]
 
+            # ── 1단계: 네이버 검색 (도메인으로 출처 검증) ────────────────────────
+            on_naver = await search_naver(session, title, press, domain, client_id, client_secret)
+            await asyncio.sleep(0.12)
+
+            if on_naver:
+                conn.execute("UPDATE articles SET delete_type=5 WHERE url=?", (url,))
+                counts[5] += 1
+                print(f"  [링크삭제]  [{press}] {title[:45]}")
+                continue
+
+            # ── 2단계: 언론사 직접 확인 ──────────────────────────────────────────
             if domain:
                 on_outlet = await search_outlet_direct(session, title, domain)
                 method = f"site:{domain}"

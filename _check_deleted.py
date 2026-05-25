@@ -23,10 +23,18 @@ TIMEOUT     = 10
 HEADERS     = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 TAG_RE    = re.compile(r"<[^>]+>")
+QUOTE_RE  = re.compile(r'["""\'\'…·]')
 ORIGIN_RE = re.compile(
     r'(?:href="(https?://[^"]+)"[^>]*class="media_end_head_origin_link"'
     r'|class="media_end_head_origin_link"[^>]*href="(https?://[^"]+)")'
 )
+
+
+def clean_title(title: str, max_len: int = 25) -> str:
+    """검색 쿼리용: 따옴표·특수문자 제거 후 공백 정리"""
+    t = QUOTE_RE.sub("", title)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t[:max_len]
 
 
 def ensure_columns(conn):
@@ -245,16 +253,7 @@ async def resolve_unknown_by_search():
                 counts[2] += 1
                 continue
 
-            # 1단계: 네이버 검색
-            on_naver = await _search_naver(session, title, press, client_id, client_secret)
-            await asyncio.sleep(0.12)
-            if on_naver:
-                conn.execute("UPDATE articles SET delete_type=5 WHERE url=?", (url,))
-                counts[5] += 1
-                print(f"  [링크삭제] [{press}] {title[:45]}")
-                continue
-
-            # 도메인 파악 (캐시 활용)
+            # 도메인 파악 (1단계 Naver 검증에도 필요하므로 먼저 수행, 캐시 활용)
             if press_code not in domain_cache:
                 domain = _get_domain_from_db(conn, press_code)
                 if not domain:
@@ -263,6 +262,15 @@ async def resolve_unknown_by_search():
                 domain_cache[press_code] = domain
 
             domain = domain_cache[press_code]
+
+            # 1단계: 네이버 검색 (도메인으로 출처 검증 — 다른 언론사 오탐 방지)
+            on_naver = await _search_naver(session, title, press, domain, client_id, client_secret)
+            await asyncio.sleep(0.12)
+            if on_naver:
+                conn.execute("UPDATE articles SET delete_type=5 WHERE url=?", (url,))
+                counts[5] += 1
+                print(f"  [링크삭제] [{press}] {title[:45]}")
+                continue
 
             # 2단계: 언론사 직접 확인
             if domain:
@@ -302,42 +310,55 @@ async def _get_domain_from_naver(session, press_name: str, client_id: str, clien
     try:
         async with session.get(
             "https://openapi.naver.com/v1/search/news.json",
-            params={"query": press_name, "display": 10, "sort": "date"},
+            params={"query": press_name, "display": 20, "sort": "date"},
             headers={"X-Naver-Client-Id": client_id, "X-Naver-Client-Secret": client_secret},
             timeout=aiohttp.ClientTimeout(total=6),
         ) as resp:
             if resp.status != 200:
                 return ""
             data = await resp.json()
+            freq: dict[str, int] = {}
             for item in data.get("items", []):
                 orig = item.get("originallink", "")
                 if not orig or not orig.startswith("http"):
                     continue
                 netloc = urlparse(orig).netloc
                 if netloc and "naver.com" not in netloc:
-                    return netloc
+                    freq[netloc] = freq.get(netloc, 0) + 1
+            if freq:
+                return max(freq, key=freq.get)
     except Exception:
         pass
     return ""
 
 
-async def _search_naver(session, title, press, client_id, client_secret) -> bool:
+async def _search_naver(session, title, press, domain, client_id, client_secret) -> bool:
+    """네이버 검색 — 같은 언론사 기사 있으면 True (도메인으로 출처 검증)"""
     try:
+        q = clean_title(title, 40)
         async with session.get(
             "https://openapi.naver.com/v1/search/news.json",
-            params={"query": title[:40], "display": 5, "sort": "date"},
+            params={"query": q, "display": 10, "sort": "date"},
             headers={"X-Naver-Client-Id": client_id, "X-Naver-Client-Secret": client_secret},
             timeout=aiohttp.ClientTimeout(total=6),
         ) as resp:
             if resp.status != 200:
                 return False
             data = await resp.json()
-            t_clean = TAG_RE.sub("", title).strip()
+            t_clean = clean_title(title, 15)
             for item in data.get("items", []):
                 i_title = TAG_RE.sub("", item.get("title", "")).strip()
-                i_link  = item.get("originallink", "") + item.get("link", "")
-                if t_clean[:15] in i_title or press in i_link:
-                    return True
+                i_orig  = item.get("originallink", "")
+                i_link  = item.get("link", "")
+                if t_clean not in i_title:
+                    continue
+                # 제목 매치 → 출처도 검증
+                if domain:
+                    if domain in i_orig:
+                        return True
+                else:
+                    if press in i_orig or press in i_link:
+                        return True
     except Exception:
         pass
     return False
@@ -345,7 +366,8 @@ async def _search_naver(session, title, press, client_id, client_secret) -> bool
 
 async def _search_outlet_direct(session, title: str, domain: str) -> bool:
     """Google RSS site:도메인 검색으로 언론사 직접 확인"""
-    query = f'site:{domain} "{title[:30]}"'
+    q     = clean_title(title, 25)
+    query = f"site:{domain} {q}"
     url   = f"https://news.google.com/rss/search?q={quote(query)}&hl=ko&gl=KR&ceid=KR:ko"
     try:
         async with session.get(
@@ -358,7 +380,7 @@ async def _search_outlet_direct(session, title: str, domain: str) -> bool:
                 return False
             text = await resp.text()
             root = ET.fromstring(text)
-            t_clean = title[:15]
+            t_clean = clean_title(title, 15)
             for item in root.iter("item"):
                 i_title = item.findtext("title") or ""
                 i_link  = item.findtext("link") or ""
@@ -371,7 +393,8 @@ async def _search_outlet_direct(session, title: str, domain: str) -> bool:
 
 async def _search_google_rss_fallback(session, title: str, press: str) -> bool:
     """도메인 파악 실패 시 제목+언론사명으로 Google RSS 검색"""
-    query = f'"{title[:30]}"'
+    q     = clean_title(title, 30)
+    query = f'"{q}"'
     url   = f"https://news.google.com/rss/search?q={quote(query)}&hl=ko&gl=KR&ceid=KR:ko"
     try:
         async with session.get(
@@ -384,7 +407,7 @@ async def _search_google_rss_fallback(session, title: str, press: str) -> bool:
                 return False
             text = await resp.text()
             root = ET.fromstring(text)
-            t_clean = title[:20]
+            t_clean = clean_title(title, 20)
             for item in root.iter("item"):
                 i_title = item.findtext("title") or ""
                 i_src   = item.findtext("source") or ""
