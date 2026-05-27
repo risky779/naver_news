@@ -448,6 +448,8 @@ async def get_article_list(page, press_code: str, max_count: int = 30) -> list[d
 async def get_article_content(page, url: str) -> dict:
     await page.goto(url, wait_until="domcontentloaded", timeout=30000)
     await page.wait_for_timeout(1500)
+    await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    await page.wait_for_timeout(800)
 
     async def text(*sels: str) -> str:
         for sel in sels:
