@@ -2,13 +2,14 @@
 naver_monitor.db → index.html 생성
 GitHub Pages용 정적 리포트
 """
+from pathlib import Path
 import sqlite3
 import json
 from datetime import datetime, timedelta
 
-DB_FILE      = "C:/Users/admin/naver_monitor.db"
-RANKING_FILE = "C:/Users/admin/press_ranking.json"
-OUT_FILE     = "C:/Users/admin/docs/index.html"
+DB_FILE      = str(Path(__file__).parent / "naver_monitor.db")
+RANKING_FILE = str(Path(__file__).parent / "press_ranking.json")
+OUT_FILE     = str(Path(__file__).parent / "docs" / "index.html")
 CANCEL_THRESHOLD = 10.0
 CANCEL_WARNING   = 7.0
 

@@ -2,6 +2,7 @@
 비제휴 언론사 기사 수집기
   Google News RSS (site:domain) → Playwright URL 추출 → trafilatura 본문 스크래핑 → DB 저장
 """
+from pathlib import Path
 import asyncio
 import sys
 import io
@@ -19,7 +20,7 @@ from playwright.async_api import async_playwright
 if hasattr(sys.stdout, "buffer"):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
-DB_FILE        = "C:/Users/admin/naver_monitor.db"
+DB_FILE        = str(Path(__file__).parent / "naver_monitor.db")
 UA_PC          = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 MAX_PER_OUTLET = 20     # 언론사당 최대 수집 기사 수
 DAYS_LOOKBACK  = 3      # 최근 N일치

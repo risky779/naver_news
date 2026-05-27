@@ -3,12 +3,13 @@
 Daum 뷰어 페이지에서 og:url 또는 원문 링크를 추출해 source_url에 저장.
 살아있는 기사만 처리 가능 (404인 경우 건너뜀).
 """
+from pathlib import Path
 import asyncio, aiohttp, sqlite3, re, sys, io
 from urllib.parse import urlparse
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-DB_FILE     = "C:/Users/admin/naver_monitor.db"
+DB_FILE     = str(Path(__file__).parent / "naver_monitor.db")
 CONCURRENCY = 10
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 

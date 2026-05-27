@@ -7,17 +7,18 @@ delete_type:
   4 = 언론사 직접 삭제 (비제휴 언론사 URL 404)
   5 = 링크 삭제 (URL만 죽었고 Naver 검색에서 기사 여전히 존재)
 """
+from pathlib import Path
 import asyncio, aiohttp, sqlite3, csv, sys, io, re, os
 import xml.etree.ElementTree as ET
 from urllib.parse import quote, urlparse
 from datetime import datetime
 from dotenv import load_dotenv
-load_dotenv("C:/Users/admin/.env")
+load_dotenv(str(Path(__file__).parent / ".env"))
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-DB_FILE     = "C:/Users/admin/naver_monitor.db"
-OUT_FILE    = "deleted_articles.csv"
+DB_FILE     = str(Path(__file__).parent / "naver_monitor.db")
+OUT_FILE    = str(Path(__file__).parent / "deleted_articles.csv")
 CONCURRENCY = 30
 TIMEOUT     = 10
 HEADERS     = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}

@@ -11,15 +11,16 @@
 
 주의: 1단계 Naver 검색 결과는 domain으로 출처 검증 — 다른 언론사 동명 기사 오탐 방지
 """
+from pathlib import Path
 import asyncio, aiohttp, sqlite3, re, sys, io, os
 import xml.etree.ElementTree as ET
 from urllib.parse import quote, urlparse
 from dotenv import load_dotenv
 
-load_dotenv("C:/Users/admin/.env")
+load_dotenv(str(Path(__file__).parent / ".env"))
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-DB_FILE   = "C:/Users/admin/naver_monitor.db"
+DB_FILE   = str(Path(__file__).parent / "naver_monitor.db")
 TAG_RE    = re.compile(r"<[^>]+>")
 QUOTE_RE  = re.compile(r'["""\'\'…·]')
 

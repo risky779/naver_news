@@ -5,6 +5,7 @@
 - 언론사 제한 없이 전체 수집
 - is_exclusive=1 마킹, 404 시 is_deleted=1
 """
+from pathlib import Path
 import asyncio
 import aiohttp
 import re
@@ -18,7 +19,7 @@ from email.utils import parsedate_to_datetime
 if hasattr(sys.stdout, "buffer"):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
-DB_FILE = "C:/Users/admin/naver_monitor.db"
+DB_FILE = str(Path(__file__).parent / "naver_monitor.db")
 TIMEOUT = 10
 UA_PC   = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 UA_MOB  = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
