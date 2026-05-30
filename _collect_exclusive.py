@@ -8,6 +8,7 @@
 from pathlib import Path
 import asyncio
 import aiohttp
+import html as _html_mod
 import re
 import sqlite3
 import sys
@@ -74,19 +75,43 @@ async def scrape_naver(page) -> list[dict]:
         except Exception as e:
             print(f"  [네이버] 오류 (start={start}): {e}")
             break
-        html = await page.content()
-        data_urls = re.findall(r'data-url=["\']([^"\']+)["\']', html)
-        href_urls = re.findall(r'href="([^"]*naver\.com/[^"]*article/\d+/\d+[^"]*)"', html)
+
+        # Playwright DOM에서 URL+제목+언론사 함께 추출
+        items = await page.evaluate("""() => {
+            const seen = new Set();
+            const results = [];
+            document.querySelectorAll('a').forEach(a => {
+                const url = a.href || '';
+                if (!url.includes('naver.com') || !/\\/article\\/\\d+\\/\\d+/.test(url)) return;
+                if (seen.has(url)) return;
+                seen.add(url);
+                const title = (a.innerText || a.textContent || '').trim();
+                let press = '';
+                let node = a.parentElement;
+                for (let i = 0; i < 6 && node; i++, node = node.parentElement) {
+                    const ps = node.querySelector('.press, .info.press, [class*="source"], [class*="press"]');
+                    if (ps) { press = ps.innerText.trim(); break; }
+                }
+                results.push({url, title, press});
+            });
+            return results;
+        }""")
+
         new = 0
-        for raw in data_urls + href_urls:
-            norm = normalize_naver_url(raw)
+        for item in items:
+            norm = normalize_naver_url(item["url"])
             if not norm or norm in seen:
                 continue
             seen.add(norm)
-            collected.append({"url": norm, "title": "", "press": "", "source": "naver"})
+            collected.append({
+                "url": norm,
+                "title": item.get("title", ""),
+                "press": item.get("press", ""),
+                "source": "naver",
+            })
             new += 1
         print(f"  [네이버] start={start}: {new}건")
-        if len(data_urls) < 5:
+        if new < 5 and p > 0:
             break
     return collected
 
@@ -176,6 +201,38 @@ async def resolve_google_links(browser, rss_items: list[dict], seen_urls: set) -
     return results
 
 
+async def fetch_article_meta(session, sem, url: str) -> dict:
+    """기사 URL → 제목·바이라인·본문 추출 (aiohttp, og 태그 + 본문 파싱)"""
+    async with sem:
+        try:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10),
+                                   allow_redirects=True,
+                                   headers={"User-Agent": UA_PC}, ssl=False) as resp:
+                if resp.status != 200:
+                    return {}
+                raw_html = await resp.text(errors="replace")
+        except Exception:
+            return {}
+
+    # og:title
+    m = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']*)["\']', raw_html)
+    if not m:
+        m = re.search(r'<meta[^>]+content=["\']([^"\']*)["\'][^>]+property=["\']og:title["\']', raw_html)
+    title = _html_mod.unescape(m.group(1).strip()) if m else ""
+
+    # 바이라인
+    bl_m = re.search(r'class="[^"]*journalist_name[^"]*"[^>]*>([^<]+)<', raw_html)
+    byline = bl_m.group(1).strip() if bl_m else ""
+
+    # 본문: #newsct_article 내부 텍스트
+    body = ""
+    body_m = re.search(r'id=["\']newsct_article["\'][^>]*>(.*?)</(?:div|article)>', raw_html, re.DOTALL)
+    if body_m:
+        body = re.sub(r'\s+', ' ', _html_mod.unescape(re.sub(r'<[^>]+>', ' ', body_m.group(1)))).strip()
+
+    return {"title": title, "byline": byline, "body": body}
+
+
 # ── 공통: DB 저장 ─────────────────────────────────────────────────────────
 async def save_candidates(conn, session, candidates: list[dict], oid_map: dict, n2c: dict):
     inserted = skipped = deleted_new = 0
@@ -188,6 +245,8 @@ async def save_candidates(conn, session, candidates: list[dict], oid_map: dict, 
         press  = item.get("press", "")
         date   = item.get("date", datetime.now().strftime("%Y-%m-%d"))
         source = item.get("source", "")
+        byline = item.get("byline", "")
+        body   = item.get("body", "")
 
         # 네이버 URL이면 OID에서 press_name 보정
         if "naver.com" in url:
@@ -196,7 +255,6 @@ async def save_candidates(conn, session, candidates: list[dict], oid_map: dict, 
             press_code = oid
             press_name = oid_map.get(oid) or press or f"oid:{oid}"
         else:
-            # 언론사 원본 URL: press 이름으로 코드 매핑
             press_name = press
             press_code = n2c.get(press, "")
 
@@ -204,13 +262,21 @@ async def save_candidates(conn, session, candidates: list[dict], oid_map: dict, 
             is_del = await check_url_deleted(session, url)
 
         is_deleted = 1 if is_del else 0
+
+        # 삭제되지 않은 기사이고 제목 없으면 기사 페이지에서 내용 수집
+        if not is_deleted and not title and "naver.com" in url:
+            meta = await fetch_article_meta(session, sem, url)
+            title  = meta.get("title", "") or title
+            byline = meta.get("byline", "") or byline
+            body   = meta.get("body", "") or body
+
         cur = conn.execute("""
             INSERT OR IGNORE INTO articles
-              (url, press_code, press_name, title, article_date,
-               first_seen, checks_json, score, is_exclusive, is_deleted)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
-        """, (url, press_code, press_name, title, date,
-              datetime.now().isoformat(), "{}", 0.0, 1, is_deleted))
+              (url, press_code, press_name, title, article_date, byline,
+               first_seen, checks_json, score, is_exclusive, is_deleted, body)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (url, press_code, press_name, title, date, byline,
+              datetime.now().isoformat(), "{}", 0.0, 1, is_deleted, body))
         if cur.rowcount:
             inserted += 1
             if is_deleted:
@@ -221,6 +287,11 @@ async def save_candidates(conn, session, candidates: list[dict], oid_map: dict, 
             if is_deleted:
                 conn.execute("UPDATE articles SET is_deleted=1 WHERE url=?", (url,))
                 deleted_new += 1
+            # 기존 기사에 제목 없으면 업데이트
+            if title:
+                conn.execute("""UPDATE articles SET title=?, byline=?, body=?
+                               WHERE url=? AND (title IS NULL OR title='')""",
+                            (title, byline, body, url))
             skipped += 1
             flag = f"기존({'❌삭제' if is_deleted else '✓'})"
         src_label = "[구글]" if source == "google" else "[네이버]"
