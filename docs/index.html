@@ -141,7 +141,7 @@
 <body>
 <header>
   <h1>네이버 뉴스 모니터링</h1>
-  <div class="meta">마지막 업데이트: 2026-05-30 23:14 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (14일)</div>
+  <div class="meta">마지막 업데이트: 2026-05-31 00:32 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (15일)</div>
 </header>
 <div class="tab-nav">
   <button id="tab-btn-del" class="tab-btn active" onclick="switchTab('del')">
@@ -169,7 +169,7 @@
         <div class="card-label">네이버만 삭제<br><span style="font-size:10px;color:#856404">언론사 원문 생존</span></div>
       </div>
       <div class="card type2-card" onclick="filterDel(2)">
-        <div class="card-num">45</div>
+        <div class="card-num">35</div>
         <div class="card-label">완전 삭제<br><span style="font-size:10px;color:#c0392b">어디서도 없음</span></div>
       </div>
 
@@ -1641,6 +1641,7 @@ function renderDel(page) {
   delPage = page;
   const filtered = delFilter === 0 ? DELETED
     : delFilter === 99 ? DELETED.filter(a => a.exclusive)
+    : delFilter === 2 ? DELETED.filter(a => a.deleteType === 2 && !a.exclusive)
     : DELETED.filter(a => a.deleteType === delFilter);
   const total = filtered.length;
   const ctr = document.getElementById('del-container');

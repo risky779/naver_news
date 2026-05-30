@@ -58,7 +58,7 @@ def load_deleted():
             "tags":        tags,
             "url":         r[7] or "",
             "exclusive":   bool(r[8]),
-            "body":        (r[9] or "")[:500],
+            "body":        r[9] or "",
             "deleteType":  int(r[10] or 3),
             "sourceUrl":   r[11] or "",
         })
@@ -208,7 +208,7 @@ def make_html(rows, art_data, earliest=None, deleted=None):
     excl_count     = sum(1 for d in deleted if d.get("exclusive"))
     type5_count    = sum(1 for d in deleted if d.get("deleteType") == 5)
     type1_count    = sum(1 for d in deleted if d.get("deleteType") == 1)
-    type2_count    = sum(1 for d in deleted if d.get("deleteType") == 2)
+    type2_count    = sum(1 for d in deleted if d.get("deleteType") == 2 and not d.get("exclusive"))
     type4_count    = sum(1 for d in deleted if d.get("deleteType") == 4)
     type3_count    = sum(1 for d in deleted if d.get("deleteType") in (3, None))
 
@@ -386,13 +386,14 @@ def make_html(rows, art_data, earliest=None, deleted=None):
         <div class="card-num">{type2_count}</div>
         <div class="card-label">완전 삭제<br><span style="font-size:10px;color:#c0392b">어디서도 없음</span></div>
       </div>
-      <div class="card type4-card" onclick="filterDel(4)">
-        <div class="card-num">{type4_count}</div>
-        <div class="card-label">언론사 직접 삭제<br><span style="font-size:10px;color:#6c3483">비제휴 언론사</span></div>
-      </div>
+
       <div class="card type3-card" onclick="filterDel(3)">
         <div class="card-num">{type3_count}</div>
         <div class="card-label">미분류<br><span style="font-size:10px;color:#555">검색 전</span></div>
+      </div>
+      <div class="card excl-card" onclick="filterDel(99)">
+        <div class="card-num">{excl_count}</div>
+        <div class="card-label">단독 삭제<br><span style="font-size:10px;color:#1a5276">[단독] 기사만</span></div>
       </div>
     </div>
     <div id="del-container"></div>
@@ -445,7 +446,7 @@ function filterDel(type) {{
   delFilter = type;
   // 카드 active 표시
   document.querySelectorAll('.del-summary .card').forEach((c, i) => {{
-    const types = [0, 5, 1, 2, 4, 3];  // 카드 순서와 매핑
+    const types = [0, 5, 1, 2, 3, 99];  // 카드 순서와 매핑
     c.classList.toggle('active-filter', types[i] === type);
   }});
   renderDel(1);
@@ -462,7 +463,10 @@ function switchTab(name) {{
 
 function renderDel(page) {{
   delPage = page;
-  const filtered = delFilter === 0 ? DELETED : DELETED.filter(a => a.deleteType === delFilter);
+  const filtered = delFilter === 0 ? DELETED
+    : delFilter === 99 ? DELETED.filter(a => a.exclusive)
+    : delFilter === 2 ? DELETED.filter(a => a.deleteType === 2 && !a.exclusive)
+    : DELETED.filter(a => a.deleteType === delFilter);
   const total = filtered.length;
   const ctr = document.getElementById('del-container');
   if (total === 0) {{

@@ -66,17 +66,42 @@ def extract_origin_url(data: bytes) -> str:
     return ""
 
 
-async def fetch_status(session, sem, url) -> int:
+async def check_source_alive(session, sem, source_url: str, title: str) -> bool:
+    """언론사 원문 URL이 실제로 살아있는지 확인 (소프트 404 포함 감지)"""
     async with sem:
         try:
             async with session.get(
-                url,
+                source_url,
                 timeout=aiohttp.ClientTimeout(total=TIMEOUT),
                 allow_redirects=True,
             ) as resp:
-                return resp.status
+                if resp.status != 200:
+                    return False
+                final_url = str(resp.url)
+                # 소프트 404 유형 1: 홈페이지·에러 경로로 리다이렉트
+                orig_path  = urlparse(source_url).path.rstrip("/")
+                final_path = urlparse(final_url).path.rstrip("/")
+                if not final_path or len(final_path) <= 2:
+                    return False
+                error_kw = ("error", "404", "not-found", "notfound", "deleted", "no-article")
+                if any(k in final_path.lower() for k in error_kw):
+                    return False
+                orig_depth  = orig_path.count("/")
+                final_depth = final_path.count("/")
+                if orig_depth >= 3 and final_depth <= 1:
+                    return False
+                # 소프트 404 유형 2: 페이지 본문에 기사 제목이 없음
+                try:
+                    chunk = await resp.content.read(32768)
+                    body = chunk.decode("utf-8", errors="replace")
+                    title_kw = clean_title(title, 12)
+                    if title_kw and title_kw not in body:
+                        return False
+                except Exception:
+                    pass
+                return True
         except Exception:
-            return -1
+            return False
 
 
 async def check_article(session, sem, url, press, title, date, is_partner, stored_source_url):
@@ -122,8 +147,8 @@ async def check_article(session, sem, url, press, title, date, is_partner, store
         if not is_partner:
             delete_type = 4
         elif new_source_url:
-            src_status = await fetch_status(session, sem, new_source_url)
-            delete_type = 1 if src_status == 200 else 2
+            alive = await check_source_alive(session, sem, new_source_url, title)
+            delete_type = 1 if alive else 2
         else:
             delete_type = 3
 
