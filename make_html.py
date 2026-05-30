@@ -91,6 +91,8 @@ def load_data():
     for entry in ranking:
         code = entry["code"]
         name = entry["name"]
+        if not entry.get("is_partner", True):
+            name = f"[비제휴] {name}"
         score, count = db_scores.get(code, (0.0, 0))
         rows.append((name, code, score, count))
     rows.sort(key=lambda x: -x[2])
