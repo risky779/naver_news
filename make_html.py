@@ -7,9 +7,10 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 
-DB_FILE      = str(Path(__file__).parent / "naver_monitor.db")
-RANKING_FILE = str(Path(__file__).parent / "press_ranking.json")
-OUT_FILE     = str(Path(__file__).parent / "docs" / "index.html")
+DB_FILE       = str(Path(__file__).parent / "naver_monitor.db")
+RANKING_FILE  = str(Path(__file__).parent / "press_ranking.json")
+PARTNER_FILE  = str(Path(__file__).parent / "partner_oids.json")
+OUT_FILE      = str(Path(__file__).parent / "docs" / "index.html")
 CANCEL_THRESHOLD = 10.0
 CANCEL_WARNING   = 7.0
 
@@ -87,11 +88,17 @@ def load_data():
     except FileNotFoundError:
         ranking = []
 
+    try:
+        with open(PARTNER_FILE, encoding="utf-8") as f:
+            partner_oids = set(json.load(f))
+    except FileNotFoundError:
+        partner_oids = {e["code"] for e in ranking}  # 파일 없으면 전체 제휴로 간주
+
     rows = []
     for entry in ranking:
         code = entry["code"]
         name = entry["name"]
-        if not entry.get("is_partner", True):
+        if code not in partner_oids:
             name = f"[비제휴] {name}"
         score, count = db_scores.get(code, (0.0, 0))
         rows.append((name, code, score, count))
