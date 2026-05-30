@@ -1,6 +1,7 @@
 naver_monitor.db
 .env
 *.json
+!partner_oids.json
 *.txt
 *.log
 wide_scan_*.json
