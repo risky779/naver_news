@@ -271,6 +271,7 @@ async def main():
 
             for i, outlet in enumerate(OUTLETS, 1):
                 name, domain = outlet["name"], outlet["domain"]
+                press_code = outlet.get("code") or domain.split(".")[0]
                 print(f"\n[{i}/{len(OUTLETS)}] {name}")
 
                 rss_items = await fetch_rss(session, domain)
@@ -295,8 +296,8 @@ async def main():
                               (url, press_name, press_code, title, article_date,
                                byline, body, is_deleted, is_exclusive,
                                is_naver_partner, first_seen)
-                            VALUES (?, ?, 'NP', ?, ?, NULL, ?, 0, 0, 0, ?)
-                        """, (url, name, title, date, body,
+                            VALUES (?, ?, ?, ?, ?, NULL, ?, 0, 0, 0, ?)
+                        """, (url, name, press_code, title, date, body,
                               datetime.now().strftime("%Y.%m.%d %H:%M")))
                         existing.add(url)
                         total_new += 1
