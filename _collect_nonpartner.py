@@ -124,22 +124,22 @@ OUTLETS = [
     {"name": "이코노믹리뷰",  "domain": "econovill.com"},
     {"name": "스타트업투데이", "domain": "startuptoday.co.kr"},
     # 스포츠/엔터
-    {"name": "스포츠조선",    "domain": "sportschosun.com"},
-    {"name": "스포츠서울",    "domain": "sportsseoul.com"},
+    {"name": "스포츠조선",    "domain": "sportschosun.com",    "code": "076"},
+    {"name": "스포츠서울",    "domain": "sportsseoul.com",     "code": "468"},
     {"name": "스포츠한국",    "domain": "sportshankook.co.kr"},
-    {"name": "뉴스엔",        "domain": "newsen.com"},
+    {"name": "뉴스엔",        "domain": "newsen.com",          "code": "609"},
     {"name": "조이뉴스24",    "domain": "joynews24.com"},
     {"name": "톱스타뉴스",    "domain": "topstarnews.com"},
-    {"name": "마이데일리",    "domain": "mydaily.co.kr"},
-    {"name": "스포츠경향",    "domain": "sports.khan.co.kr"},
-    {"name": "일간스포츠",    "domain": "isplus.com"},
+    {"name": "마이데일리",    "domain": "mydaily.co.kr",       "code": "117"},
+    {"name": "스포츠경향",    "domain": "sports.khan.co.kr",  "code": "144"},
+    {"name": "일간스포츠",    "domain": "isplus.com",          "code": "241"},
     {"name": "텐아시아",      "domain": "tenasia.hankyung.com"},
-    {"name": "베스트일레븐",  "domain": "best11.com"},
-    {"name": "스포츠동아",    "domain": "sports.donga.com"},
-    {"name": "MBC연예",       "domain": "imbc.com"},
-    {"name": "포포투",        "domain": "fourfourtwo.co.kr"},
-    {"name": "MHN스포츠",     "domain": "mhns.co.kr"},
-    {"name": "아이즈",        "domain": "ize.co.kr"},
+    {"name": "베스트일레븐",  "domain": "best11.com",          "code": "343"},
+    {"name": "스포츠동아",    "domain": "sports.donga.com",   "code": "382"},
+    {"name": "MBC연예",       "domain": "imbc.com",            "code": "408"},
+    {"name": "포포투",        "domain": "fourfourtwo.co.kr",   "code": "411"},
+    {"name": "MHN스포츠",     "domain": "mhns.co.kr",          "code": "445"},
+    {"name": "아이즈",        "domain": "ize.co.kr",           "code": "465"},
     # 추가 IT/기술
     {"name": "ZDNet Korea",   "domain": "zdnet.co.kr"},
     {"name": "디지털투데이",  "domain": "digitaltoday.co.kr"},
@@ -271,7 +271,15 @@ async def main():
 
             for i, outlet in enumerate(OUTLETS, 1):
                 name, domain = outlet["name"], outlet["domain"]
-                press_code = outlet.get("code") or domain.split(".")[0]
+                if outlet.get("code"):
+                    press_code = outlet["code"]
+                else:
+                    # TLD 제거 후 서브도메인 점을 _로 치환
+                    d = domain
+                    for sfx in (".co.kr", ".or.kr", ".com", ".net", ".org", ".tv", ".kr"):
+                        if d.endswith(sfx):
+                            d = d[:-len(sfx)]; break
+                    press_code = d.replace(".", "_").replace("-", "_")
                 print(f"\n[{i}/{len(OUTLETS)}] {name}")
 
                 rss_items = await fetch_rss(session, domain)
