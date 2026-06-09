@@ -63,6 +63,7 @@ OUTLETS = [
     {"name": "중부일보",      "domain": "joongboo.com"},
     {"name": "강원매일",      "domain": "kwnews.co.kr"},
     # 온라인/시사
+    {"name": "NBN미디어",     "domain": "nbnnews.co.kr"},
     {"name": "뉴데일리",      "domain": "newdaily.co.kr"},
     {"name": "펜앤드마이크",   "domain": "pennmike.com"},
     {"name": "아시아투데이",   "domain": "asiatoday.co.kr"},
