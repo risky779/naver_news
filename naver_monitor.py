@@ -480,6 +480,13 @@ async def get_article_content(page, url: str) -> dict:
     if (not byline or _byline_is_dept) and body:
         all_lines = [l.strip() for l in body.strip().splitlines() if l.strip()]
         _personal = ""
+        # 통신사 인라인 바이라인: "[서울=뉴시스] 변해정 기자 =", "[부산=뉴스1] 홍길동 기자 ="
+        if not _personal:
+            for line in all_lines[:10]:
+                m = re.search(r"\[[가-힣\s]+=(?:뉴시스|뉴스1|연합뉴스)\]\s+([가-힣]{2,4})\s+기자", line)
+                if m:
+                    _personal = m.group(1)
+                    break
         # 방송 리포트 서명: "YTN 김다연입니다" — 실제 취재 기자 우선 추출
         if not _personal:
             for line in all_lines:
