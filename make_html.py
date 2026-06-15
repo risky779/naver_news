@@ -49,7 +49,8 @@ def load_deleted():
             checks = json.loads(r[4] or "{}")
         except Exception:
             checks = {}
-        tags = [f"{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점" for k in checks]
+        tags = [f"{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점"
+                for k, v in checks.items() if isinstance(v, dict) and v.get("violated")]
         deleted.append({
             "press":       r[0] or "",
             "title":       r[1] or "(제목 없음)",
@@ -121,7 +122,8 @@ def load_data():
             checks = json.loads(a[5] or "{}")
         except Exception:
             checks = {}
-        tags = [f"{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점" for k in checks]
+        tags = [f"{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점"
+                for k, v in checks.items() if isinstance(v, dict) and v.get("violated")]
         vio_lines = [l.strip() for l in (a[7] or "").split("\n") if l.strip()]
         art_data.setdefault(code, []).append({
             "title":     a[2] or "",
