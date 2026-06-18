@@ -228,7 +228,7 @@ def make_html(rows, art_data, earliest=None, deleted=None):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>뉴스킬러</title>
+<title>뉴스킬러 By 대한민국해시(#)포럼</title>
 <style>
   :root {{
     --danger: #e74c3c; --warning: #f39c12; --ok: #27ae60;
@@ -365,7 +365,7 @@ def make_html(rows, art_data, earliest=None, deleted=None):
 </head>
 <body>
 <header>
-  <h1>뉴스킬러</h1>
+  <h1>뉴스킬러 By 대한민국해시(#)포럼</h1>
   <div class="meta">마지막 업데이트: {now} &nbsp;|&nbsp; 누적 데이터 기간: {period_label}</div>
 </header>
 <div class="tab-nav">
