@@ -190,6 +190,20 @@ Q_DISCLOSURE_WORDS = [
 R_PRICE_PATTERN = re.compile(r"\d{1,3}(?:,\d{3})*원|\d+만\s*원|\d+천\s*원")
 R_CTA_WORDS = ["구매", "주문", "신청", "예약", "가입", "구독", "결제", "할인"]
 R_PRODUCT_SIGNALS = ["제품", "상품", "출시", "판매", "정가", "정품", "모델명"]
+
+# R-sub: 담배·주류 등 법적 제한 품목 단순 홍보 (규정 제11조 R항 세부)
+# 업체 제공 정보만 일방 전달 — 객관적 비교·분석·평가 없이 신제품·출시 홍보
+RESTRICTED_ITEM_WORDS = [
+    "담배", "궐련", "전자담배", "씹는담배", "니코틴",          # 담배류
+    "맥주", "소주", "와인", "위스키", "막걸리", "청주",
+    "보드카", "럼", "브랜디", "양주", "주류", "증류주",        # 주류
+]
+RESTRICTED_PR_SIGNALS = ["출시", "신제품", "한정판", "한정 출시", "선보", "새롭게 출시",
+                          "새로운 맛", "새로운 제품", "라인업"]
+RESTRICTED_ANALYSIS_WORDS = ["비교", "분석", "평가", "연구", "부작용", "문제점",
+                               "논란", "식약처", "보건", "전문가", "임상", "규제",
+                               "금지", "경고", "위험", "피해"]
+
 # 하드뉴스 문맥(법원·노조·정치·사건)이면 R항 제외
 R_NEWS_CONTEXT = [
     # 법률·사법
@@ -483,7 +497,7 @@ async def get_article_content(page, url: str) -> dict:
         # 통신사 인라인 바이라인: "[서울=뉴시스] 변해정 기자 =", "[부산=뉴스1] 홍길동 기자 ="
         if not _personal:
             for line in all_lines[:10]:
-                m = re.search(r"\[[가-힣\s]+=(?:뉴시스|뉴스1|연합뉴스)\]\s+([가-힣]{2,4})\s+기자", line)
+                m = re.search(r"\[[가-힣\s]+=(?:뉴시스|뉴스1|연합뉴스)\]\s*([가-힣]{2,4})\s+기자", line)
                 if m:
                     _personal = m.group(1)
                     break
@@ -708,11 +722,25 @@ def analyze_rules(article: dict) -> dict:
     is_hard_news = any(w in body for w in R_NEWS_CONTEXT)
     r_violated = has_price and len(cta_hits) >= 2 and bool(prod_hits) and not has_r_disc and not is_hard_news
     r_price_m  = R_PRICE_PATTERN.search(body)
+    r_reason   = (f"가격노출+구매유도({cta_hits[:2]})+상품정보({prod_hits[:2]})" if r_violated else "")
+    r_text     = extract_context(body, r_price_m.group()) if r_violated and r_price_m else ""
+
+    # R-sub: 담배·주류 등 법적 제한 품목 단순 홍보 (객관적 분석 없이 업체 정보만 전달)
+    title_body = title + " " + body
+    restricted_hit = next((w for w in RESTRICTED_ITEM_WORDS if w in title_body), None)
+    pr_hit         = next((s for s in RESTRICTED_PR_SIGNALS if s in title_body), None)
+    has_analysis   = any(w in body for w in RESTRICTED_ANALYSIS_WORDS)
+    r_restricted   = bool(restricted_hit and pr_hit and not has_analysis
+                          and not has_r_disc and not is_hard_news)
+    if r_restricted and not r_violated:
+        r_violated = True
+        r_reason   = f"법적제한품목홍보({restricted_hit}+{pr_hit})"
+        r_text     = pr_hit
+
     results["R_commercial"] = {
         "violated": r_violated,
-        "reason":  (f"가격노출+구매유도({cta_hits[:2]})+상품정보({prod_hits[:2]})"
-                    if r_violated else "정상"),
-        "text":    extract_context(body, r_price_m.group()) if r_violated and r_price_m else "",
+        "reason":   r_reason if r_violated else "정상",
+        "text":     r_text,
     }
 
     return results
