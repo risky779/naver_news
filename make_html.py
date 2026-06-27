@@ -394,6 +394,9 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   .reason-group-unimpl {{ opacity: .55; }}
   .unimpl-hd {{ color: #95a5a6 !important; }}
   .score-hint {{ font-size: 10px; color: #aaa; font-weight: 400; margin-left: 4px; }}
+  .th-subtitle {{ display: block; font-size: 9px; font-weight: 400; color: #999; margin-top: 1px; line-height: 1.3; }}
+  .sub-num {{ display: inline-block; font-size: 11px; font-weight: 700; color: #2980b9;
+    min-width: 26px; }}
   .unimpl-tag {{ display: inline-block; font-size: 10px; font-weight: 400; padding: 1px 5px;
     border-radius: 3px; background: #f0f0f0; color: #95a5a6; border: 1px solid #ddd;
     vertical-align: middle; margin-left: 6px; }}
@@ -577,22 +580,34 @@ const ITEM_SHORT = {{
   'M_category_mismatch':'M', 'N_unlicensed':'N', 'O_copyright':'O', 'P_unfair_profit':'P',
   'Q_paid_article':'Q', 'R_commercial':'R',
 }};
-// 규정 공식 세부항목 정의 (match: 포함 문자열, null=catch-all, unimpl=미구현)
+const ITEM_SUBTITLE = {{
+  'A_court_ruling':      '법원판결',   'B_clickbait':         '과장·왜곡',
+  'C_byline_missing':    '바이라인',   'D_ai_undisclosed':    'AI미표시',
+  'E_sensational':       '선정성',     'F_ad_obstruct':       '광고방해',
+  'G_tech_stability':    '기술안정성', 'H_ux_harm':           '이용자경험',
+  'I_url_swap':          'URL바꿔치기','J_duplicate':         '중복기사',
+  'K_main_news_abuse':   '주요뉴스오용','L_keyword_abuse':    '키워드남용',
+  'M_category_mismatch': '카테고리위반','N_unlicensed':       '계약미포함',
+  'O_copyright':         '저작권',     'P_unfair_profit':     '부당이익',
+  'Q_paid_article':      '유가기사',   'R_commercial':        '광고상품',
+}};
+
+// 규정 공식 세부항목 정의 (num: 표시번호, match: 포함 문자열, null=catch-all, unimpl=미구현)
 const ITEM_SUBITEMS = {{
   'C_byline_missing': [
-    {{ label: '실재하지 않는 기자명 사용', score: 4, match: '__UNIMPL__', unimpl: true }},
-    {{ label: '부서명 바이라인 사용', score: 1, match: '부서명' }},
-    {{ label: '기자·필진 식별정보 없음', score: 1, match: null }},
+    {{ num: 'C-1', label: '실재하지 않는 기자명 사용', score: 4, match: '__UNIMPL__', unimpl: true }},
+    {{ num: 'C-2', label: '부서명 바이라인 사용',       score: 1, match: '부서명' }},
+    {{ num: 'C-3', label: '기자·필진 식별정보 없음',    score: 1, match: null }},
   ],
   'L_keyword_abuse': [
-    {{ label: '검색어 은닉 삽입', score: 2, match: '__UNIMPL__', unimpl: true }},
-    {{ label: '키워드 반복·과도 삽입', score: 1.5, match: null }},
+    {{ num: 'L-1', label: '검색어 은닉 삽입',        score: 2,   match: '__UNIMPL__', unimpl: true }},
+    {{ num: 'L-2', label: '키워드 반복·과도 삽입',   score: 1.5, match: null }},
   ],
   'R_commercial': [
-    {{ label: '구매유도 목적 판매정보 노출', score: 1, match: '구매유도' }},
-    {{ label: '담배·주류 등 법적 제한 품목', score: 1, match: '법적제한품목' }},
-    {{ label: '기사 외 영역 광고 연결', score: 1, match: '__UNIMPL__', unimpl: true }},
-    {{ label: '노골적 홍보(간접 노출)', score: 0.5, match: '__UNIMPL__', unimpl: true }},
+    {{ num: 'R-1', label: '구매유도 목적 판매정보 노출',   score: 1,   match: '구매유도' }},
+    {{ num: 'R-2', label: '담배·주류 등 법적 제한 품목',  score: 1,   match: '법적제한품목' }},
+    {{ num: 'R-3', label: '기사 외 영역 광고 연결',       score: 1,   match: '__UNIMPL__', unimpl: true }},
+    {{ num: 'R-4', label: '노골적 홍보(간접 노출)',        score: 0.5, match: '__UNIMPL__', unimpl: true }},
   ],
 }};
 
@@ -647,12 +662,15 @@ function renderItemMatrix(sortKey) {{
     entries.sort((a, b) => b[1].items[itemSortKey].length - a[1].items[itemSortKey].length);
 
   const thCols = ITEM_KEYS.map(k => {{
+    const sub = ITEM_SUBTITLE[k] || '';
     if (ITEM_UNIMPL.has(k)) {{
       return `<th class="th-unimpl" title="${{ITEM_TAG_PREFIX[k]}}(미구현)">`
-           + `${{ITEM_SHORT[k]}}<br><span style="font-size:9px;font-weight:400">(미구현)</span></th>`;
+           + `${{ITEM_SHORT[k]}}<span class="th-subtitle">${{sub}}</span>`
+           + `<span class="th-subtitle" style="color:#ccc">(미구현)</span></th>`;
     }}
     const active = itemSortKey === k ? ' th-sort-active' : '';
-    return `<th class="th-sort${{active}}" onclick="renderItemMatrix('${{k}}')" title="${{ITEM_TAG_PREFIX[k]}}">${{ITEM_SHORT[k]}}</th>`;
+    return `<th class="th-sort${{active}}" onclick="renderItemMatrix('${{k}}')" title="${{ITEM_TAG_PREFIX[k]}}">`
+         + `${{ITEM_SHORT[k]}}<span class="th-subtitle">${{sub}}</span></th>`;
   }}).join('');
   const totalActive = itemSortKey === 'total' ? ' th-sort-active' : '';
 
@@ -744,9 +762,10 @@ function renderItemDetail(code) {{
         }}
 
         const groupHtml = subitems.map(sub => {{
+          const numTag = sub.num ? `<span class="sub-num">${{esc(sub.num)}}</span> ` : '';
           if (sub.unimpl) {{
             return `<div class="reason-group reason-group-unimpl">
-              <div class="reason-group-hd unimpl-hd">${{esc(sub.label)}}
+              <div class="reason-group-hd unimpl-hd">${{numTag}}${{esc(sub.label)}}
                 <span class="score-hint">(${{sub.score}}점)</span>
                 <span class="unimpl-tag">미구현</span>
               </div>
@@ -754,7 +773,7 @@ function renderItemDetail(code) {{
           }}
           const gArts = buckets[sub.label] || [];
           return `<div class="reason-group">
-            <div class="reason-group-hd">${{esc(sub.label)}}
+            <div class="reason-group-hd">${{numTag}}${{esc(sub.label)}}
               <span class="score-hint">(${{sub.score}}점)</span>
               <span class="reason-cnt">${{gArts.length}}건</span>
             </div>
