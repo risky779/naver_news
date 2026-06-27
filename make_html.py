@@ -125,6 +125,8 @@ def load_data():
         tags = [f"{ITEM_LABELS.get(k, k)} {ITEM_WEIGHTS.get(k, 0)}점"
                 for k, v in checks.items() if isinstance(v, dict) and v.get("violated")]
         vio_lines = [l.strip() for l in (a[7] or "").split("\n") if l.strip()]
+        reasons = {k: v.get("reason", "") for k, v in checks.items()
+                   if isinstance(v, dict) and v.get("violated")}
         art_data.setdefault(code, []).append({
             "title":     a[2] or "",
             "byline":    a[3] or "(없음)",
@@ -132,6 +134,7 @@ def load_data():
             "score":     round(float(a[6] or 0), 1),
             "tags":      tags,
             "vioText":   vio_lines,
+            "reasons":   reasons,
             "url":       a[8] or "#",
             "exclusive": bool(a[9]),
             "aiScore":   round(float(a[10] or 0), 1) if a[10] is not None else None,
@@ -212,6 +215,10 @@ def make_html(rows, art_data, earliest=None, deleted=None):
       </div>
     </div>"""
 
+    press_list_json = json.dumps(
+        [{"code": code, "name": name} for name, code, score, count in rows],
+        ensure_ascii=False
+    )
     art_data_json  = json.dumps(art_data, ensure_ascii=False)
     deleted        = deleted or []
     deleted_json   = json.dumps(deleted, ensure_ascii=False)
@@ -355,6 +362,45 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   .ai-badge-caution {{ display:inline-block; font-size:10px; font-weight:700; padding:1px 5px;
                  border-radius:3px; background:#fdcb6e; color:#333; margin-right:5px;
                  vertical-align:middle; letter-spacing:0.5px; }}
+  /* ── 항목별 현황 매트릭스 ── */
+  .matrix-table {{ width: 100%; border-collapse: collapse; background: var(--card-bg);
+    border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }}
+  .matrix-table th {{ background: #f1f2f6; padding: 8px 6px; text-align: center;
+    font-size: 12px; color: var(--sub); border-bottom: 1px solid var(--border); }}
+  .matrix-table th:nth-child(1), .matrix-table th:nth-child(2) {{ text-align: left; padding-left: 14px; }}
+  .matrix-table td {{ padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; text-align: center; }}
+  .matrix-table td:nth-child(2) {{ text-align: left; padding-left: 14px; font-weight: 600; }}
+  .matrix-row {{ cursor: pointer; transition: background .15s; }}
+  .matrix-row:hover {{ background: #f1f2f6; }}
+  .th-sort {{ cursor: pointer; user-select: none; }}
+  .th-sort:hover {{ background: #e1e3ed !important; }}
+  .th-sort-active {{ color: var(--text) !important; background: #e8eaf6 !important; }}
+  .m-cell {{ display: inline-block; min-width: 26px; text-align: center; padding: 2px 5px;
+    border-radius: 4px; font-size: 13px; font-weight: 600; }}
+  .cnt0 {{ color: #ccc; font-weight: 400; }}
+  .cnt1 {{ background: #fff3cd; color: #856404; }}
+  .cnt3 {{ background: #ffdbb5; color: #c0711a; }}
+  .cnt6 {{ background: #ffeaea; color: #c0392b; }}
+  .item-detail-row td {{ padding: 0; }}
+  .item-detail-inner {{ padding: 12px 16px 16px; background: #f8f9fc; border-top: 1px solid var(--border); }}
+  .item-section {{ margin-bottom: 14px; }}
+  .item-section-hd {{ font-weight: 700; font-size: 13px; color: var(--danger); margin-bottom: 6px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--del-border); }}
+  .item-art {{ padding: 4px 0; font-size: 12px; border-bottom: 1px solid #f0f0f0; }}
+  .item-art:last-child {{ border-bottom: none; }}
+  .item-art-vio {{ font-size: 11px; color: #576574; margin-top: 2px; padding-left: 10px;
+    border-left: 2px solid var(--border); }}
+  .item-section-unimpl {{ opacity: .55; }}
+  .unimpl-hd {{ color: #95a5a6 !important; }}
+  .unimpl-tag {{ display: inline-block; font-size: 10px; font-weight: 400; padding: 1px 5px;
+    border-radius: 3px; background: #f0f0f0; color: #95a5a6; border: 1px solid #ddd;
+    vertical-align: middle; margin-left: 6px; }}
+  .reason-group {{ margin: 6px 0 10px 0; padding-left: 12px; border-left: 3px solid #dfe4ea; }}
+  .reason-group-hd {{ font-size: 12px; font-weight: 700; color: #2f3542; margin-bottom: 5px;
+    padding: 3px 8px; background: #f1f2f6; border-radius: 3px; display: inline-block; }}
+  .reason-cnt {{ font-size: 11px; font-weight: 400; color: var(--sub); margin-left: 6px; }}
+  .th-unimpl {{ background: #f8f8f8 !important; color: #bbb !important; cursor: default; line-height: 1.4; }}
+  .tab-btn.active.items-tab {{ color: #2980b9; border-bottom-color: #2980b9; }}
   @media (max-width: 600px) {{
     .tab-btn {{ font-size: 13px; padding: 12px 10px; }}
     .cards, .del-summary {{ gap: 8px; }}
@@ -374,6 +420,9 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   </button>
   <button id="tab-btn-quality" class="tab-btn quality" onclick="switchTab('quality')">
     📊 뉴스 품질 모니터링
+  </button>
+  <button id="tab-btn-items" class="tab-btn items-tab" onclick="switchTab('items')">
+    📋 항목별 현황
   </button>
 </div>
 
@@ -435,10 +484,21 @@ def make_html(rows, art_data, earliest=None, deleted=None):
   </div>
 </div>
 
+<!-- 탭 3: 항목별 현황 -->
+<div id="tab-items" class="tab-panel">
+  <div class="container">
+    <div class="meta" style="font-size:12px;color:var(--sub);margin-bottom:16px;padding-top:4px;">
+      신문사별 항목(B~R) 위반 건수 (24개월 누적) &nbsp;|&nbsp; 열 헤더 클릭 시 해당 항목 기준 정렬 &nbsp;|&nbsp; 행 클릭 시 기사 목록
+    </div>
+    <div id="item-matrix"></div>
+  </div>
+</div>
+
 <footer>네이버 뉴스 제휴 심사 및 운영 평가 규정 (2026.02.11) 기준</footer>
 <script>
-const VDATA    = {art_data_json};
-const DELETED  = {deleted_json};
+const VDATA      = {art_data_json};
+const DELETED    = {deleted_json};
+const PRESS_LIST = {press_list_json};
 const PAGE_SIZE = 10;
 const curPage  = {{}};
 let   delPage  = 1;
@@ -470,6 +530,195 @@ function switchTab(name) {{
   document.getElementById('tab-btn-' + name).classList.add('active');
   if (name === 'del' && document.getElementById('del-container').innerHTML === '')
     renderDel(1);
+  if (name === 'items' && !_matrix)
+    renderItemMatrix('total');
+}}
+
+/* ── 항목별 현황 ── */
+const ITEM_KEYS = [
+  'A_court_ruling',
+  'B_clickbait','C_byline_missing','D_ai_undisclosed','E_sensational',
+  'F_ad_obstruct','G_tech_stability','H_ux_harm','I_url_swap',
+  'J_duplicate','K_main_news_abuse','L_keyword_abuse',
+  'M_category_mismatch','N_unlicensed','O_copyright','P_unfair_profit',
+  'Q_paid_article','R_commercial'
+];
+const ITEM_UNIMPL = new Set([
+  'A_court_ruling','F_ad_obstruct','G_tech_stability','H_ux_harm','I_url_swap',
+  'K_main_news_abuse','M_category_mismatch','N_unlicensed','O_copyright','P_unfair_profit'
+]);
+const ITEM_TAG_PREFIX = {{
+  'A_court_ruling':      'A.법원판결',
+  'B_clickbait':         'B.클릭베이트',
+  'C_byline_missing':    'C.바이라인 없음',
+  'D_ai_undisclosed':    'D.AI생성 미표시',
+  'E_sensational':       'E.선정성',
+  'F_ad_obstruct':       'F.광고방해',
+  'G_tech_stability':    'G.기술안정성',
+  'H_ux_harm':           'H.이용자경험방해',
+  'I_url_swap':          'I.URL바꿔치기',
+  'J_duplicate':         'J.중복기사',
+  'K_main_news_abuse':   'K.주요뉴스오용',
+  'L_keyword_abuse':     'L.키워드남용',
+  'M_category_mismatch': 'M.카테고리위반',
+  'N_unlicensed':        'N.계약미포함',
+  'O_copyright':         'O.저작권침해',
+  'P_unfair_profit':     'P.부당이익요구',
+  'Q_paid_article':      'Q.유가기사',
+  'R_commercial':        'R.광고성상품',
+}};
+const ITEM_SHORT = {{
+  'A_court_ruling':'A', 'B_clickbait':'B', 'C_byline_missing':'C',
+  'D_ai_undisclosed':'D', 'E_sensational':'E',
+  'F_ad_obstruct':'F', 'G_tech_stability':'G', 'H_ux_harm':'H', 'I_url_swap':'I',
+  'J_duplicate':'J', 'K_main_news_abuse':'K', 'L_keyword_abuse':'L',
+  'M_category_mismatch':'M', 'N_unlicensed':'N', 'O_copyright':'O', 'P_unfair_profit':'P',
+  'Q_paid_article':'Q', 'R_commercial':'R',
+}};
+let _matrix = null;
+let itemSortKey = 'total';
+
+function buildMatrix() {{
+  const mat = {{}};
+  for (const p of PRESS_LIST) {{
+    const arts = VDATA[p.code] || [];
+    const items = {{}};
+    for (const k of ITEM_KEYS) items[k] = [];
+    for (const art of arts) {{
+      for (const tag of (art.tags || [])) {{
+        for (const k of ITEM_KEYS) {{
+          if (tag.startsWith(ITEM_TAG_PREFIX[k])) {{
+            items[k].push(art);
+            break;
+          }}
+        }}
+      }}
+    }}
+    const total = ITEM_KEYS.reduce((s, k) => s + items[k].length, 0);
+    if (total > 0) mat[p.code] = {{ name: p.name, items, total }};
+  }}
+  return mat;
+}}
+
+function cntClass(n) {{
+  if (n === 0) return 'cnt0';
+  if (n < 3)  return 'cnt1';
+  if (n < 6)  return 'cnt3';
+  return 'cnt6';
+}}
+
+function renderItemMatrix(sortKey) {{
+  itemSortKey = sortKey || itemSortKey;
+  if (!_matrix) _matrix = buildMatrix();
+
+  let entries = Object.entries(_matrix);
+  if (itemSortKey === 'total')
+    entries.sort((a, b) => b[1].total - a[1].total);
+  else
+    entries.sort((a, b) => b[1].items[itemSortKey].length - a[1].items[itemSortKey].length);
+
+  const thCols = ITEM_KEYS.map(k => {{
+    if (ITEM_UNIMPL.has(k)) {{
+      return `<th class="th-unimpl" title="${{ITEM_TAG_PREFIX[k]}}(미구현)">`
+           + `${{ITEM_SHORT[k]}}<br><span style="font-size:9px;font-weight:400">(미구현)</span></th>`;
+    }}
+    const active = itemSortKey === k ? ' th-sort-active' : '';
+    return `<th class="th-sort${{active}}" onclick="renderItemMatrix('${{k}}')" title="${{ITEM_TAG_PREFIX[k]}}">${{ITEM_SHORT[k]}}</th>`;
+  }}).join('');
+  const totalActive = itemSortKey === 'total' ? ' th-sort-active' : '';
+
+  const bodyRows = entries.map(([code, d], i) => {{
+    const cells = ITEM_KEYS.map(k => {{
+      if (ITEM_UNIMPL.has(k))
+        return `<td><span class="m-cell cnt0" style="color:#e0e0e0">·</span></td>`;
+      const n = d.items[k].length;
+      return `<td><span class="m-cell ${{cntClass(n)}}">${{n > 0 ? n : '·'}}</span></td>`;
+    }}).join('');
+    return `
+      <tr class="matrix-row" onclick="toggleItemDetail('${{code}}')">
+        <td class="rank">${{i + 1}}</td>
+        <td>${{esc(d.name)}}</td>
+        ${{cells}}
+        <td><strong>${{d.total}}</strong></td>
+      </tr>
+      <tr id="idetail-${{code}}" class="item-detail-row" style="display:none">
+        <td colspan="${{ITEM_KEYS.length + 3}}">
+          <div id="idetail-inner-${{code}}" class="item-detail-inner"></div>
+        </td>
+      </tr>`;
+  }}).join('');
+
+  document.getElementById('item-matrix').innerHTML = `
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th style="width:40px">순위</th>
+          <th>언론사</th>
+          ${{thCols}}
+          <th class="th-sort${{totalActive}}" onclick="renderItemMatrix('total')">합계</th>
+        </tr>
+      </thead>
+      <tbody>${{bodyRows}}</tbody>
+    </table>`;
+}}
+
+function toggleItemDetail(code) {{
+  const row = document.getElementById('idetail-' + code);
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  if (!open) renderItemDetail(code);
+}}
+
+function renderItemDetail(code) {{
+  const d = _matrix[code];
+  if (!d) return;
+
+  const sections = ITEM_KEYS
+    .filter(k => ITEM_UNIMPL.has(k) || d.items[k].length > 0)
+    .map(k => {{
+      const label = ITEM_TAG_PREFIX[k];
+
+      if (ITEM_UNIMPL.has(k)) {{
+        return `<div class="item-section item-section-unimpl">
+          <div class="item-section-hd unimpl-hd">${{esc(label)}} <span class="unimpl-tag">미구현</span></div>
+        </div>`;
+      }}
+
+      const arts   = d.items[k];
+
+      // reason 기준으로 그룹핑
+      const groups = {{}};
+      for (const art of arts) {{
+        const reason = (art.reasons && art.reasons[k]) || '기타';
+        if (!groups[reason]) groups[reason] = [];
+        groups[reason].push(art);
+      }}
+
+      const groupHtml = Object.entries(groups)
+        .sort((a, b) => b[1].length - a[1].length)
+        .map(([reason, gArts]) => {{
+          const artHtml = gArts.slice(0, 10).map(a =>
+            `<div class="item-art">
+              <a href="${{esc(a.url)}}" target="_blank" style="color:var(--text)">${{esc(a.title)}}</a>
+              <span style="color:var(--sub);margin-left:6px;font-size:11px">${{esc((a.date||'').slice(0,10))}}</span>
+            </div>`
+          ).join('');
+          const more = gArts.length > 10
+            ? `<div style="font-size:11px;color:var(--sub);padding:2px 0">…외 ${{gArts.length - 10}}건</div>` : '';
+          return `<div class="reason-group">
+            <div class="reason-group-hd">${{esc(reason)}} <span class="reason-cnt">${{gArts.length}}건</span></div>
+            ${{artHtml}}${{more}}
+          </div>`;
+        }}).join('');
+
+      return `<div class="item-section">
+        <div class="item-section-hd">${{esc(label)}} (${{arts.length}}건)</div>
+        ${{groupHtml}}
+      </div>`;
+    }}).join('');
+
+  document.getElementById('idetail-inner-' + code).innerHTML =
+    sections || '<div style="color:var(--sub)">위반 없음</div>';
 }}
 
 function renderDel(page) {{
