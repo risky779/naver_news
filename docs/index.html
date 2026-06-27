@@ -185,7 +185,7 @@
 <body>
 <header>
   <h1>뉴스킬러 By 대한민국 해시(#)포럼</h1>
-  <div class="meta">마지막 업데이트: 2026-06-27 22:42 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (42일)</div>
+  <div class="meta">마지막 업데이트: 2026-06-27 22:44 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (42일)</div>
 </header>
 <div class="tab-nav">
   <button id="tab-btn-del" class="tab-btn active" onclick="switchTab('del')">
@@ -3557,16 +3557,18 @@ function renderItemMatrix(sortKey) {
   const bodyRows = entries.map(([code, d], i) => {
     const cells = ITEM_KEYS.map(k => {
       if (ITEM_UNIMPL.has(k))
-        return `<td><span class="m-cell cnt0" style="color:#e0e0e0">·</span></td>`;
+        return `<td onclick="event.stopPropagation();toggleItemDetail('${code}','${k}')" style="cursor:pointer">`
+             + `<span class="m-cell cnt0" style="color:#e0e0e0">·</span></td>`;
       const n = d.items[k].length;
-      return `<td><span class="m-cell ${cntClass(n)}">${n > 0 ? n : '·'}</span></td>`;
+      return `<td onclick="event.stopPropagation();toggleItemDetail('${code}','${k}')" style="cursor:pointer">`
+           + `<span class="m-cell ${cntClass(n)}">${n > 0 ? n : '·'}</span></td>`;
     }).join('');
     return `
       <tr class="matrix-row" onclick="toggleItemDetail('${code}')">
         <td class="rank">${i + 1}</td>
         <td>${esc(d.name)}</td>
         ${cells}
-        <td><strong>${d.total}</strong></td>
+        <td onclick="event.stopPropagation();toggleItemDetail('${code}')" style="cursor:pointer"><strong>${d.total}</strong></td>
       </tr>
       <tr id="idetail-${code}" class="item-detail-row" style="display:none">
         <td colspan="${ITEM_KEYS.length + 3}">
@@ -3589,11 +3591,19 @@ function renderItemMatrix(sortKey) {
     </table>`;
 }
 
-function toggleItemDetail(code) {
-  const row = document.getElementById('idetail-' + code);
-  const open = row.style.display !== 'none';
-  row.style.display = open ? 'none' : 'table-row';
-  if (!open) renderItemDetail(code);
+function toggleItemDetail(code, filterKey) {
+  const row    = document.getElementById('idetail-' + code);
+  const isOpen = row.style.display !== 'none';
+  const prev   = row.dataset.filter || '';
+  const next   = filterKey || '';
+  if (isOpen && prev === next) {
+    row.style.display = 'none';
+    row.dataset.filter = '';
+  } else {
+    row.style.display = 'table-row';
+    row.dataset.filter = next;
+    renderItemDetail(code, next || null);
+  }
 }
 
 function artRow(a) {
@@ -3610,11 +3620,12 @@ function artList(gArts) {
   return html + more;
 }
 
-function renderItemDetail(code) {
+function renderItemDetail(code, filterKey) {
   const d = _matrix[code];
   if (!d) return;
 
-  const sections = ITEM_KEYS
+  const keysToShow = filterKey ? [filterKey] : ITEM_KEYS;
+  const sections = keysToShow
     .filter(k => ITEM_UNIMPL.has(k) || d.items[k].length > 0)
     .map(k => {
       const label = ITEM_TAG_PREFIX[k];
