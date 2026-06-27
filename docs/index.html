@@ -159,7 +159,9 @@
   .item-art-vio { font-size: 11px; color: #576574; margin-top: 2px; padding-left: 10px;
     border-left: 2px solid var(--border); }
   .item-section-unimpl { opacity: .55; }
+  .reason-group-unimpl { opacity: .55; }
   .unimpl-hd { color: #95a5a6 !important; }
+  .score-hint { font-size: 10px; color: #aaa; font-weight: 400; margin-left: 4px; }
   .unimpl-tag { display: inline-block; font-size: 10px; font-weight: 400; padding: 1px 5px;
     border-radius: 3px; background: #f0f0f0; color: #95a5a6; border: 1px solid #ddd;
     vertical-align: middle; margin-left: 6px; }
@@ -180,7 +182,7 @@
 <body>
 <header>
   <h1>뉴스킬러 By 대한민국 해시(#)포럼</h1>
-  <div class="meta">마지막 업데이트: 2026-06-27 22:26 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (42일)</div>
+  <div class="meta">마지막 업데이트: 2026-06-27 22:36 &nbsp;|&nbsp; 누적 데이터 기간: 2026-05-16 ~ 현재 (42일)</div>
 </header>
 <div class="tab-nav">
   <button id="tab-btn-del" class="tab-btn active" onclick="switchTab('del')">
@@ -3455,6 +3457,33 @@ const ITEM_SHORT = {
   'M_category_mismatch':'M', 'N_unlicensed':'N', 'O_copyright':'O', 'P_unfair_profit':'P',
   'Q_paid_article':'Q', 'R_commercial':'R',
 };
+// 규정 공식 세부항목 정의 (match: 포함 문자열, null=catch-all, unimpl=미구현)
+const ITEM_SUBITEMS = {
+  'C_byline_missing': [
+    { label: '실재하지 않는 기자명 사용', score: 4, match: '__UNIMPL__', unimpl: true },
+    { label: '부서명 바이라인 사용', score: 1, match: '부서명' },
+    { label: '기자·필진 식별정보 없음', score: 1, match: null },
+  ],
+  'L_keyword_abuse': [
+    { label: '검색어 은닉 삽입', score: 2, match: '__UNIMPL__', unimpl: true },
+    { label: '키워드 반복·과도 삽입', score: 1.5, match: null },
+  ],
+  'R_commercial': [
+    { label: '구매유도 목적 판매정보 노출', score: 1, match: '구매유도' },
+    { label: '담배·주류 등 법적 제한 품목', score: 1, match: '법적제한품목' },
+    { label: '기사 외 영역 광고 연결', score: 1, match: '__UNIMPL__', unimpl: true },
+    { label: '노골적 홍보(간접 노출)', score: 0.5, match: '__UNIMPL__', unimpl: true },
+  ],
+};
+
+function getSubitem(subitems, reason) {
+  for (const sub of subitems)
+    if (!sub.unimpl && sub.match !== null && reason.includes(sub.match)) return sub;
+  for (const sub of subitems)
+    if (!sub.unimpl && sub.match === null) return sub;
+  return null;
+}
+
 let _matrix = null;
 let itemSortKey = 'total';
 
@@ -3549,6 +3578,20 @@ function toggleItemDetail(code) {
   if (!open) renderItemDetail(code);
 }
 
+function artRow(a) {
+  return `<div class="item-art">
+    <a href="${esc(a.url)}" target="_blank" style="color:var(--text)">${esc(a.title)}</a>
+    <span style="color:var(--sub);margin-left:6px;font-size:11px">${esc((a.date||'').slice(0,10))}</span>
+  </div>`;
+}
+
+function artList(gArts) {
+  const html = gArts.slice(0, 10).map(artRow).join('');
+  const more = gArts.length > 10
+    ? `<div style="font-size:11px;color:var(--sub);padding:2px 0">…외 ${gArts.length - 10}건</div>` : '';
+  return html + more;
+}
+
 function renderItemDetail(code) {
   const d = _matrix[code];
   if (!d) return;
@@ -3558,38 +3601,71 @@ function renderItemDetail(code) {
     .map(k => {
       const label = ITEM_TAG_PREFIX[k];
 
+      // ① 전체 미구현 항목
       if (ITEM_UNIMPL.has(k)) {
         return `<div class="item-section item-section-unimpl">
           <div class="item-section-hd unimpl-hd">${esc(label)} <span class="unimpl-tag">미구현</span></div>
         </div>`;
       }
 
-      const arts   = d.items[k];
+      const arts = d.items[k];
 
-      // reason 기준으로 그룹핑
+      // ② 규정 공식 세부항목이 정의된 경우 (C, L, R)
+      if (ITEM_SUBITEMS[k]) {
+        const subitems = ITEM_SUBITEMS[k];
+        const buckets  = {};
+        for (const sub of subitems) buckets[sub.label] = [];
+
+        for (const art of arts) {
+          const reason  = (art.reasons && art.reasons[k]) || '';
+          const matched = getSubitem(subitems, reason);
+          if (matched) buckets[matched.label].push(art);
+          else { if (!buckets['기타']) buckets['기타'] = []; buckets['기타'].push(art); }
+        }
+
+        const groupHtml = subitems.map(sub => {
+          if (sub.unimpl) {
+            return `<div class="reason-group reason-group-unimpl">
+              <div class="reason-group-hd unimpl-hd">${esc(sub.label)}
+                <span class="score-hint">(${sub.score}점)</span>
+                <span class="unimpl-tag">미구현</span>
+              </div>
+            </div>`;
+          }
+          const gArts = buckets[sub.label] || [];
+          return `<div class="reason-group">
+            <div class="reason-group-hd">${esc(sub.label)}
+              <span class="score-hint">(${sub.score}점)</span>
+              <span class="reason-cnt">${gArts.length}건</span>
+            </div>
+            ${artList(gArts)}
+          </div>`;
+        }).join('');
+
+        const extra = buckets['기타'] && buckets['기타'].length
+          ? `<div class="reason-group"><div class="reason-group-hd">기타 <span class="reason-cnt">${buckets['기타'].length}건</span></div>${artList(buckets['기타'])}</div>` : '';
+
+        return `<div class="item-section">
+          <div class="item-section-hd">${esc(label)} (${arts.length}건)</div>
+          ${groupHtml}${extra}
+        </div>`;
+      }
+
+      // ③ 세부항목 미정의 → reason 문자열 기준 그룹핑 (B, D, E, J, Q)
       const groups = {};
       for (const art of arts) {
         const reason = (art.reasons && art.reasons[k]) || '기타';
         if (!groups[reason]) groups[reason] = [];
         groups[reason].push(art);
       }
-
       const groupHtml = Object.entries(groups)
         .sort((a, b) => b[1].length - a[1].length)
-        .map(([reason, gArts]) => {
-          const artHtml = gArts.slice(0, 10).map(a =>
-            `<div class="item-art">
-              <a href="${esc(a.url)}" target="_blank" style="color:var(--text)">${esc(a.title)}</a>
-              <span style="color:var(--sub);margin-left:6px;font-size:11px">${esc((a.date||'').slice(0,10))}</span>
-            </div>`
-          ).join('');
-          const more = gArts.length > 10
-            ? `<div style="font-size:11px;color:var(--sub);padding:2px 0">…외 ${gArts.length - 10}건</div>` : '';
-          return `<div class="reason-group">
+        .map(([reason, gArts]) =>
+          `<div class="reason-group">
             <div class="reason-group-hd">${esc(reason)} <span class="reason-cnt">${gArts.length}건</span></div>
-            ${artHtml}${more}
-          </div>`;
-        }).join('');
+            ${artList(gArts)}
+          </div>`
+        ).join('');
 
       return `<div class="item-section">
         <div class="item-section-hd">${esc(label)} (${arts.length}건)</div>
